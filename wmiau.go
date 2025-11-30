@@ -815,6 +815,22 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 
 		postmap["type"] = "Message"
 		dowebhook = 1
+
+		// Se for atualização de enquete, tenta descriptografar o voto
+		if evt.Message.GetPollUpdateMessage() != nil {
+			pollVote, err := mycli.WAClient.DecryptPollVote(context.Background(), evt)
+			if err == nil {
+				postmap["pollVote"] = pollVote
+				log.Info().
+					Interface("vote", pollVote).
+					Msg("Voto de enquete descriptografado com sucesso")
+			} else {
+				log.Error().
+					Err(err).
+					Msg("Falha ao descriptografar voto de enquete")
+			}
+		}
+
 		metaParts := []string{fmt.Sprintf("pushname: %s", evt.Info.PushName), fmt.Sprintf("timestamp: %s", evt.Info.Timestamp)}
 		if evt.Info.Type != "" {
 			metaParts = append(metaParts, fmt.Sprintf("type: %s", evt.Info.Type))
@@ -1751,7 +1767,41 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	case *events.UndecryptableMessage:
 		postmap["type"] = "UndecryptableMessage"
 		dowebhook = 1
-		log.Warn().Str("info", evt.Info.SourceString()).Msg("Undecryptable message received")
+		log.Warn().
+		Str("info", evt.Info.SourceString()).
+		Msg("Undecryptable message received")
+
+		// Dispara um pedido de “mensagem indisponível” pro WhatsApp reenviar
+		go func() {
+			// Pequeno atraso pra não parecer spam se forem muitas mensagens
+			time.Sleep(500 * time.Millisecond)
+
+			// Monta a requisição de Unavailable Message
+			retryMsg := mycli.WAClient.BuildUnavailableMessageRequest(
+				evt.Info.Chat,
+				evt.Info.Sender,
+				evt.Info.ID,
+			)
+
+			// Envia a solicitação (Peer: true é importante aqui)
+			_, err := mycli.WAClient.SendMessage(
+				context.Background(),
+				evt.Info.Chat,
+				retryMsg,
+				whatsmeow.SendRequestExtra{Peer: true},
+			)
+			if err != nil {
+				log.Error().
+					Err(err).
+					Str("id", evt.Info.ID).
+					Msg("Falha ao solicitar reenvio de mensagem")
+			} else {
+				log.Info().
+					Str("id", evt.Info.ID).
+					Msg("Solicitação de reenvio enviada com sucesso (Unavailable Request)")
+			}
+		}()
+	
 	case *events.MediaRetry:
 		postmap["type"] = "MediaRetry"
 		dowebhook = 1
@@ -1836,6 +1886,24 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		postmap["type"] = "NewsletterLiveUpdate"
 		dowebhook = 1
 		log.Info().Msg("Newsletter live update")
+	case *events.DeleteForMe:
+		postmap["type"] = "DeleteForMe"
+		dowebhook = 1
+
+		// campos principais do evento DeleteForMe :contentReference[oaicite:1]{index=1}
+		postmap["chatjid"] = evt.ChatJID.String()
+		postmap["senderjid"] = evt.SenderJID.String()
+		postmap["isfromme"] = evt.IsFromMe
+		postmap["messageid"] = evt.MessageID
+		postmap["timestamp"] = evt.Timestamp.Unix()
+
+		log.Info().
+			Str("chatjid", evt.ChatJID.String()).
+			Str("senderjid", evt.SenderJID.String()).
+			Bool("isfromme", evt.IsFromMe).
+			Str("messageid", evt.MessageID).
+			Msg("DeleteForMe event received")
+
 	case *events.FBMessage:
 		postmap["type"] = "FBMessage"
 		dowebhook = 1

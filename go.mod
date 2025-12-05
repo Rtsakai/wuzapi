@@ -2,8 +2,6 @@ module wuzapi
 
 go 1.24.0
 
-toolchain go1.24.7
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
@@ -14,7 +12,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/rs/zerolog v1.34.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	go.mau.fi/whatsmeow v0.0.0-20251120135021-071293c6b9f0
+	go.mau.fi/whatsmeow v0.0.0-20251127132918-b9ac3d51d746
 	google.golang.org/protobuf v1.36.10
 )
 

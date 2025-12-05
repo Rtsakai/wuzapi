@@ -2300,8 +2300,9 @@ func (s *server) SendPoll() http.HandlerFunc {
 func (s *server) DeleteMessage() http.HandlerFunc {
 
 	type textStruct struct {
-		Phone string
-		Id    string
+		Phone  string
+		Id     string
+		SentAt int64 `json:"sent_at"` // unix em segundos
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -2323,7 +2324,15 @@ func (s *server) DeleteMessage() http.HandlerFunc {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("could not decode Payload"))
 			return
 		}
-
+		// 🔒 Limite de 120 segundos
+		if t.SentAt != 0 {
+			msgTime := time.Unix(t.SentAt, 0)
+			age := time.Since(msgTime)
+			if age > 120*time.Second || age < -5*time.Second {
+				s.Respond(w, r, http.StatusBadRequest, errors.New("message too old to revoke (limit 120s)"))
+				return
+			}
+		}
 		if t.Phone == "" {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("missing Phone in Payload"))
 			return
@@ -2955,11 +2964,31 @@ func (s *server) GetAvatar() http.HandlerFunc {
 		var pic *types.ProfilePictureInfo
 
 		existingID := ""
-		pic, err = clientManager.GetWhatsmeowClient(txtid).GetProfilePictureInfo(context.Background(), jid, &whatsmeow.GetProfilePictureParams{
-			Preview:    t.Preview,
-			ExistingID: existingID,
-		})
+		pic, err = clientManager.GetWhatsmeowClient(txtid).GetProfilePictureInfo(
+			context.Background(),
+			jid,
+			&whatsmeow.GetProfilePictureParams{
+				Preview:    t.Preview,
+				ExistingID: existingID,
+			},
+		)
 		if err != nil {
+			errStr := err.Error()
+
+			// caso esperado: usuário escondeu a foto de perfil
+			if strings.Contains(errStr, "the user has hidden their profile picture from you") {
+				log.Info().
+					Str("jid", jid.String()).
+					Msg("Avatar oculto pelo usuário; ignorando como erro")
+
+				// devolve algo leve pro caller
+				s.Respond(w, r, http.StatusOK, map[string]interface{}{
+					"hidden": true,
+				})
+				return
+			}
+
+			// demais erros continuam sendo ERROR
 			msg := fmt.Sprintf("failed to get avatar: %v", err)
 			log.Error().Msg(msg)
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(msg))
@@ -2976,13 +3005,12 @@ func (s *server) GetAvatar() http.HandlerFunc {
 		responseJson, err := json.Marshal(pic)
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
+			return
 		}
-		return
+
+		s.Respond(w, r, http.StatusOK, string(responseJson))
 	}
 }
-
 // Gets all contacts
 func (s *server) GetContacts() http.HandlerFunc {
 
@@ -6472,3 +6500,5 @@ func (s *server) DownloadSticker() http.HandlerFunc {
 		return
 	}
 }
+
+

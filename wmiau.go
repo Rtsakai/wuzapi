@@ -31,6 +31,7 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"golang.org/x/net/proxy"
 )
+var avatarCache = cache.New(6*time.Hour, 12*time.Hour) // já usa github.com/patrickmn/go-cache
 
 // db field declaration as *sqlx.DB
 type MyClient struct {
@@ -655,6 +656,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	path := ""
 
 	switch evt := rawEvt.(type) {
+	
 	case *events.AppStateSyncComplete:
 		if len(mycli.WAClient.Store.PushName) > 0 && evt.Name == appstate.WAPatchCriticalBlock {
 			err := mycli.WAClient.SendPresence(context.Background(), types.PresenceAvailable)
@@ -793,6 +795,47 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Msg("Received StreamReplaced event")
 		return
 	case *events.Message:
+		// ---- Filtro para ignorar broadcast / status ----
+		chatStr := evt.Info.Chat.String()
+		if strings.HasSuffix(chatStr, "@broadcast") || strings.HasPrefix(chatStr, "status@") {
+			log.Info().
+				Str("chat", chatStr).
+				Str("id", evt.Info.ID).
+				Msg("Ignorando mensagem de broadcast/status")
+			break
+		}
+		// ---- fim do filtro ----
+		// --- Avatar: busca eventual, sem spam ---
+		if !evt.Info.IsGroup {
+			jid := evt.Info.Chat
+
+			cacheKey := mycli.userID + "|" + jid.String()
+
+			if _, found := avatarCache.Get(cacheKey); !found {
+				go func(j types.JID, key string) {
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+
+					pic, err := mycli.WAClient.GetProfilePictureInfo(ctx, j, nil)
+					if err != nil || pic == nil {
+						if err != nil {
+							log.Debug().Err(err).Str("jid", j.String()).Msg("Falha ao obter avatar")
+						}
+						return
+					}
+
+					avatarCache.Set(key, "ok", 6*time.Hour)
+
+					m := map[string]interface{}{
+						"type":      "Avatar",
+						"jid":       j.String(),
+						"imageID":   pic.ID,
+						"avatarURL": pic.URL,
+					}
+					sendEventWithWebHook(mycli, m, "")
+				}(jid, cacheKey)
+			}
+		}
 
 		var s3Config struct {
 			Enabled       string `db:"s3_enabled"`
@@ -841,7 +884,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		if evt.IsViewOnce {
 			metaParts = append(metaParts, "view once")
 		}
-		if evt.IsViewOnce {
+		if evt.IsEphemeral {
 			metaParts = append(metaParts, "ephemeral")
 		}
 
@@ -868,8 +911,14 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 
 				// Determine the file extension based on the MIME type
 				exts, _ := mime.ExtensionsByType(img.GetMimetype())
-				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+exts[0])
 
+				ext := ".jpg"
+				if len(exts) > 0 && exts[0] != "" {
+					ext = exts[0]
+				}
+
+				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+ext)
+				
 				// Write the image to the temporary file
 				err = os.WriteFile(tmpPath, data, 0600)
 				if err != nil {
@@ -1738,23 +1787,23 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Str("state", fmt.Sprintf("%s", evt.State)).Str("media", fmt.Sprintf("%s", evt.Media)).Str("chat", evt.MessageSource.Chat.String()).Str("sender", evt.MessageSource.Sender.String()).Msg("Chat Presence received")
 	case *events.CallOffer:
 		postmap["type"] = "CallOffer"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call offer")
 	case *events.CallAccept:
 		postmap["type"] = "CallAccept"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call accept")
 	case *events.CallTerminate:
 		postmap["type"] = "CallTerminate"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call terminate")
 	case *events.CallOfferNotice:
 		postmap["type"] = "CallOfferNotice"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call offer notice")
 	case *events.CallRelayLatency:
 		postmap["type"] = "CallRelayLatency"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call relay latency")
 	case *events.Disconnected:
 		postmap["type"] = "Disconnected"
@@ -1768,22 +1817,31 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		postmap["type"] = "UndecryptableMessage"
 		dowebhook = 1
 		log.Warn().
-		Str("info", evt.Info.SourceString()).
-		Msg("Undecryptable message received")
+			Str("info", evt.Info.SourceString()).
+			Msg("Undecryptable message received")
 
-		// Dispara um pedido de “mensagem indisponível” pro WhatsApp reenviar
-		go func() {
-			// Pequeno atraso pra não parecer spam se forem muitas mensagens
+		// NÃO tenta reenvio para LID ou status@broadcast
+		chat := evt.Info.Chat
+		sender := evt.Info.Sender
+
+		if chat.Server == "lid" || sender.Server == "lid" ||
+			(chat.User == "status" && chat.Server == "broadcast") {
+			log.Warn().
+				Str("chat", chat.String()).
+				Str("sender", sender.String()).
+				Msg("Undecryptable de LID/status; não será solicitado reenvio")
+			break
+		}
+
+		go func(evt *events.UndecryptableMessage) {
 			time.Sleep(500 * time.Millisecond)
 
-			// Monta a requisição de Unavailable Message
 			retryMsg := mycli.WAClient.BuildUnavailableMessageRequest(
 				evt.Info.Chat,
 				evt.Info.Sender,
 				evt.Info.ID,
 			)
 
-			// Envia a solicitação (Peer: true é importante aqui)
 			_, err := mycli.WAClient.SendMessage(
 				context.Background(),
 				evt.Info.Chat,
@@ -1791,6 +1849,16 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 				whatsmeow.SendRequestExtra{Peer: true},
 			)
 			if err != nil {
+				// se o erro for “no signal session established”, baixa pra WARN
+				if strings.Contains(err.Error(), "no signal session established") {
+					log.Warn().
+						Err(err).
+						Str("id", evt.Info.ID).
+						Str("chat", evt.Info.Chat.String()).
+						Msg("Sem sessão signal ao solicitar reenvio; ignorando")
+					return
+				}
+
 				log.Error().
 					Err(err).
 					Str("id", evt.Info.ID).
@@ -1800,8 +1868,8 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					Str("id", evt.Info.ID).
 					Msg("Solicitação de reenvio enviada com sucesso (Unavailable Request)")
 			}
-		}()
-	
+		}(evt)
+
 	case *events.MediaRetry:
 		postmap["type"] = "MediaRetry"
 		dowebhook = 1
@@ -1872,19 +1940,19 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Str("jid", evt.JID.String()).Msg("Identity changed")
 	case *events.NewsletterJoin:
 		postmap["type"] = "NewsletterJoin"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter joined")
 	case *events.NewsletterLeave:
 		postmap["type"] = "NewsletterLeave"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter left")
 	case *events.NewsletterMuteChange:
 		postmap["type"] = "NewsletterMuteChange"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter mute changed")
 	case *events.NewsletterLiveUpdate:
 		postmap["type"] = "NewsletterLiveUpdate"
-		dowebhook = 1
+		dowebhook = 0
 		log.Info().Msg("Newsletter live update")
 	case *events.DeleteForMe:
 		postmap["type"] = "DeleteForMe"
@@ -1915,4 +1983,12 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	if dowebhook == 1 {
 		sendEventWithWebHook(mycli, postmap, path)
 	}
+}
+func (mycli *MyClient) RevokeOutgoingMessage(chatJID types.JID, msgID string) error {
+    _, err := mycli.WAClient.RevokeMessage(
+        context.Background(),
+        chatJID,
+        types.MessageID(msgID),
+    )
+    return err
 }

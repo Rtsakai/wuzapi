@@ -1750,66 +1750,8 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Error().Str("reason", fmt.Sprintf("%+v", evt)).Msg("Failed to connect to Whatsapp")
 	case *events.UndecryptableMessage:
 		postmap["type"] = "UndecryptableMessage"
-		postmap["chatjid"] = evt.Info.Chat.String()
-		postmap["senderjid"] = evt.Info.Sender.String()
-		postmap["messageid"] = evt.Info.ID
-		postmap["isfromme"] = evt.Info.IsFromMe
-		postmap["timestamp"] = evt.Info.Timestamp.Unix()
 		dowebhook = 1
-		log.Warn().
-			Str("info", evt.Info.SourceString()).
-			Msg("Undecryptable message received")
-
-		chat := evt.Info.Chat
-		sender := evt.Info.Sender
-
-		// Ignora LID e status@broadcast para evitar erros de sessão Signal
-		if chat.Server == "lid" || sender.Server == "lid" ||
-			(chat.User == "status" && chat.Server == "broadcast") {
-			log.Warn().
-				Str("chat", chat.String()).
-				Str("sender", sender.String()).
-				Msg("Undecryptable de LID/status; não será solicitado reenvio")
-			break
-		}
-
-		go func(evt *events.UndecryptableMessage) {
-			time.Sleep(500 * time.Millisecond)
-
-			retryMsg := mycli.WAClient.BuildUnavailableMessageRequest(
-				evt.Info.Chat,
-				evt.Info.Sender,
-				evt.Info.ID,
-			)
-
-			_, err := mycli.WAClient.SendMessage(
-				context.Background(),
-				evt.Info.Chat,
-				retryMsg,
-				whatsmeow.SendRequestExtra{Peer: true},
-			)
-			if err != nil {
-				// Erro esperado quando não há sessão signal -> vira WARN
-				if strings.Contains(err.Error(), "no signal session established") {
-					log.Warn().
-						Err(err).
-						Str("id", evt.Info.ID).
-						Str("chat", evt.Info.Chat.String()).
-						Msg("Sem sessão signal ao solicitar reenvio; ignorando")
-					return
-				}
-
-				log.Error().
-					Err(err).
-					Str("id", evt.Info.ID).
-					Msg("Falha ao solicitar reenvio de mensagem")
-				return
-			}
-
-			log.Info().
-				Str("id", evt.Info.ID).
-				Msg("Solicitação de reenvio enviada com sucesso (Unavailable Request)")
-		}(evt)
+		log.Warn().Str("info", evt.Info.SourceString()).Msg("Undecryptable message received")
 	case *events.MediaRetry:
 		postmap["type"] = "MediaRetry"
 		dowebhook = 1
@@ -1899,10 +1841,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		dowebhook = 1
 		log.Info().Str("info", evt.Info.SourceString()).Msg("Facebook message received")
 	default:
-		log.Warn().
-			Str("eventType", fmt.Sprintf("%T", evt)).
-			Str("eventValue", fmt.Sprintf("%+v", evt)).
-			Msg("Unhandled event")
+		log.Warn().Str("event", fmt.Sprintf("%+v", evt)).Msg("Unhandled event")
 	}
 
 	if dowebhook == 1 {

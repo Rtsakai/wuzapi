@@ -33,6 +33,7 @@ import (
 )
 var avatarCache = cache.New(6*time.Hour, 12*time.Hour) // já usa github.com/patrickmn/go-cache
 
+
 // db field declaration as *sqlx.DB
 type MyClient struct {
 	WAClient       *whatsmeow.Client
@@ -656,7 +657,6 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	path := ""
 
 	switch evt := rawEvt.(type) {
-	
 	case *events.AppStateSyncComplete:
 		if len(mycli.WAClient.Store.PushName) > 0 && evt.Name == appstate.WAPatchCriticalBlock {
 			err := mycli.WAClient.SendPresence(context.Background(), types.PresenceAvailable)
@@ -858,22 +858,6 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 
 		postmap["type"] = "Message"
 		dowebhook = 1
-
-		// Se for atualização de enquete, tenta descriptografar o voto
-		if evt.Message.GetPollUpdateMessage() != nil {
-			pollVote, err := mycli.WAClient.DecryptPollVote(context.Background(), evt)
-			if err == nil {
-				postmap["pollVote"] = pollVote
-				log.Info().
-					Interface("vote", pollVote).
-					Msg("Voto de enquete descriptografado com sucesso")
-			} else {
-				log.Error().
-					Err(err).
-					Msg("Falha ao descriptografar voto de enquete")
-			}
-		}
-
 		metaParts := []string{fmt.Sprintf("pushname: %s", evt.Info.PushName), fmt.Sprintf("timestamp: %s", evt.Info.Timestamp)}
 		if evt.Info.Type != "" {
 			metaParts = append(metaParts, fmt.Sprintf("type: %s", evt.Info.Type))
@@ -884,7 +868,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		if evt.IsViewOnce {
 			metaParts = append(metaParts, "view once")
 		}
-		if evt.IsEphemeral {
+		if evt.IsViewOnce {
 			metaParts = append(metaParts, "ephemeral")
 		}
 
@@ -911,14 +895,8 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 
 				// Determine the file extension based on the MIME type
 				exts, _ := mime.ExtensionsByType(img.GetMimetype())
+				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+exts[0])
 
-				ext := ".jpg"
-				if len(exts) > 0 && exts[0] != "" {
-					ext = exts[0]
-				}
-
-				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+ext)
-				
 				// Write the image to the temporary file
 				err = os.WriteFile(tmpPath, data, 0600)
 				if err != nil {
@@ -1787,23 +1765,23 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Str("state", fmt.Sprintf("%s", evt.State)).Str("media", fmt.Sprintf("%s", evt.Media)).Str("chat", evt.MessageSource.Chat.String()).Str("sender", evt.MessageSource.Sender.String()).Msg("Chat Presence received")
 	case *events.CallOffer:
 		postmap["type"] = "CallOffer"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call offer")
 	case *events.CallAccept:
 		postmap["type"] = "CallAccept"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call accept")
 	case *events.CallTerminate:
 		postmap["type"] = "CallTerminate"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call terminate")
 	case *events.CallOfferNotice:
 		postmap["type"] = "CallOfferNotice"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call offer notice")
 	case *events.CallRelayLatency:
 		postmap["type"] = "CallRelayLatency"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("event", fmt.Sprintf("%+v", evt)).Msg("Got call relay latency")
 	case *events.Disconnected:
 		postmap["type"] = "Disconnected"
@@ -1815,15 +1793,20 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Error().Str("reason", fmt.Sprintf("%+v", evt)).Msg("Failed to connect to Whatsapp")
 	case *events.UndecryptableMessage:
 		postmap["type"] = "UndecryptableMessage"
+		postmap["chatjid"] = evt.Info.Chat.String()
+		postmap["senderjid"] = evt.Info.Sender.String()
+		postmap["messageid"] = evt.Info.ID
+		postmap["isfromme"] = evt.Info.IsFromMe
+		postmap["timestamp"] = evt.Info.Timestamp.Unix()
 		dowebhook = 1
 		log.Warn().
 			Str("info", evt.Info.SourceString()).
 			Msg("Undecryptable message received")
 
-		// NÃO tenta reenvio para LID ou status@broadcast
 		chat := evt.Info.Chat
 		sender := evt.Info.Sender
 
+		// Ignora LID e status@broadcast para evitar erros de sessão Signal
 		if chat.Server == "lid" || sender.Server == "lid" ||
 			(chat.User == "status" && chat.Server == "broadcast") {
 			log.Warn().
@@ -1849,7 +1832,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 				whatsmeow.SendRequestExtra{Peer: true},
 			)
 			if err != nil {
-				// se o erro for “no signal session established”, baixa pra WARN
+				// Erro esperado quando não há sessão signal -> vira WARN
 				if strings.Contains(err.Error(), "no signal session established") {
 					log.Warn().
 						Err(err).
@@ -1863,13 +1846,13 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					Err(err).
 					Str("id", evt.Info.ID).
 					Msg("Falha ao solicitar reenvio de mensagem")
-			} else {
-				log.Info().
-					Str("id", evt.Info.ID).
-					Msg("Solicitação de reenvio enviada com sucesso (Unavailable Request)")
+				return
 			}
-		}(evt)
 
+			log.Info().
+				Str("id", evt.Info.ID).
+				Msg("Solicitação de reenvio enviada com sucesso (Unavailable Request)")
+		}(evt)
 	case *events.MediaRetry:
 		postmap["type"] = "MediaRetry"
 		dowebhook = 1
@@ -1925,7 +1908,18 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 	case *events.UserAbout:
 		postmap["type"] = "UserAbout"
 		dowebhook = 1
-		log.Info().Str("jid", evt.JID.String()).Msg("User about updated")
+
+		// Log normal
+		log.Info().
+			Str("jid", evt.JID.String()).
+			Msg("User about updated")
+
+		// Se vier vazio, marcar como erro esperável/ignorar
+		if strings.TrimSpace(evt.Status) == "" {
+			log.Warn().
+				Str("jid", evt.JID.String()).
+				Msg("Ignorable: UserAbout com status vazio — qualquer erro 400 desse evento pode ser ignorado")
+		}
 	case *events.OfflineSyncCompleted:
 		postmap["type"] = "OfflineSyncCompleted"
 		dowebhook = 1
@@ -1940,55 +1934,64 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Str("jid", evt.JID.String()).Msg("Identity changed")
 	case *events.NewsletterJoin:
 		postmap["type"] = "NewsletterJoin"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter joined")
 	case *events.NewsletterLeave:
 		postmap["type"] = "NewsletterLeave"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter left")
 	case *events.NewsletterMuteChange:
 		postmap["type"] = "NewsletterMuteChange"
-		dowebhook = 0
+		dowebhook = 1
 		log.Info().Str("jid", evt.ID.String()).Msg("Newsletter mute changed")
 	case *events.NewsletterLiveUpdate:
 		postmap["type"] = "NewsletterLiveUpdate"
-		dowebhook = 0
-		log.Info().Msg("Newsletter live update")
-	case *events.DeleteForMe:
-		postmap["type"] = "DeleteForMe"
 		dowebhook = 1
-
-		// campos principais do evento DeleteForMe :contentReference[oaicite:1]{index=1}
-		postmap["chatjid"] = evt.ChatJID.String()
-		postmap["senderjid"] = evt.SenderJID.String()
-		postmap["isfromme"] = evt.IsFromMe
-		postmap["messageid"] = evt.MessageID
-		postmap["timestamp"] = evt.Timestamp.Unix()
-
-		log.Info().
-			Str("chatjid", evt.ChatJID.String()).
-			Str("senderjid", evt.SenderJID.String()).
-			Bool("isfromme", evt.IsFromMe).
-			Str("messageid", evt.MessageID).
-			Msg("DeleteForMe event received")
-
+		log.Info().Msg("Newsletter live update")
 	case *events.FBMessage:
 		postmap["type"] = "FBMessage"
 		dowebhook = 1
 		log.Info().Str("info", evt.Info.SourceString()).Msg("Facebook message received")
+	case *events.BusinessName:
+		// mudança de nome de negócio verificado
+		log.Info().
+			Str("jid", evt.JID.String()).
+			Str("oldBusinessName", evt.OldBusinessName).
+			Str("newBusinessName", evt.NewBusinessName).
+			Msg("BusinessName change (ignorable)")
+
+		// se quiser mandar pro webhook, descomenta:
+		postmap["type"] = "BusinessName"
+		postmap["jid"] = evt.JID.String()
+		postmap["old_business_name"] = evt.OldBusinessName
+		postmap["new_business_name"] = evt.NewBusinessName
+		dowebhook = 1
+
+	case *events.PushName:
+		// mudança de push name
+		log.Info().
+			Str("jid", evt.JID.String()).
+			Str("oldPushName", evt.OldPushName).
+			Str("newPushName", evt.NewPushName).
+			Msg("PushName change (ignorable)")
+
+		// se quiser mandar pro webhook, descomenta:
+		postmap["type"] = "PushName"
+		postmap["jid"] = evt.JID.String()
+		postmap["jidAlt"] = evt.JIDAlt.String()
+		postmap["old_push_name"] = evt.OldPushName
+		postmap["new_push_name"] = evt.NewPushName
+		dowebhook = 1
+
+
 	default:
-		log.Warn().Str("event", fmt.Sprintf("%+v", evt)).Msg("Unhandled event")
+		log.Warn().
+			Str("eventType", fmt.Sprintf("%T", evt)).
+			Str("eventValue", fmt.Sprintf("%+v", evt)).
+			Msg("Unhandled event")
 	}
 
 	if dowebhook == 1 {
 		sendEventWithWebHook(mycli, postmap, path)
 	}
-}
-func (mycli *MyClient) RevokeOutgoingMessage(chatJID types.JID, msgID string) error {
-    _, err := mycli.WAClient.RevokeMessage(
-        context.Background(),
-        chatJID,
-        types.MessageID(msgID),
-    )
-    return err
 }

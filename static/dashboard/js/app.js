@@ -25,32 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+$("#webhookEvents").dropdown();
+$("#webhookEventsInstance").dropdown();
   // Initialize dropdowns for webhook events
-  $('#webhookEvents').dropdown({
-    onChange: function(value, text, $selectedItem) {
-      if (isHandlingChange) return;
-      if (value.includes('All')) {
-        // If "All" is selected, clear selection and select only "All"
-        isHandlingChange = true;
-        $('#webhookEvents').dropdown('clear');
-        $('#webhookEvents').dropdown('set selected', 'All');
-        isHandlingChange = false;
-      }
-    }
-  });
 
-  $('#webhookEventsInstance').dropdown({
-    onChange: function(value, text, $selectedItem) {
-      if (isHandlingChange) return;
-      if (value.includes('All')) {
-        // If "All" is selected, clear selection and select only "All"
-        isHandlingChange = true;
-        $('#webhookEventsInstance').dropdown('clear');
-        $('#webhookEventsInstance').dropdown('set selected', 'All');
-        isHandlingChange = false;
-      }
-    }
-  });
 
   // Initialize S3 media delivery dropdown
   $('#s3MediaDelivery').dropdown();
@@ -564,24 +542,50 @@ async function addInstance(data) {
 }
 
 function webhookModal() {
-  getWebhook().then((response)=>{
-    if(response.success==true) {
-      $('#webhookEvents').val(response.data.subscribe);
-      $('#webhookEvents').dropdown('set selected', response.data.subscribe);
-      $('#webhookinput').val(response.data.webhook);
-      $('#modalSetWebhook').modal({onApprove: function() {
-        setWebhook().then((result)=>{
-          if(result.success===true) {
-             $.toast({ class: 'success', message: `Webhook set successfully !`});
-          } else {
-             $.toast({ class: 'error', message: `Problem setting webhook: ${result.error}`});
-          }
-        });
-        return true;
-      }}).modal('show');
+  getWebhook().then((response) => {
+    if (response.success === true && response.data) {
+      // Preenche eventos e URL atuais, se existirem
+      if (response.data.subscribe) {
+        $('#webhookEvents').dropdown('set selected', response.data.subscribe);
+      }
+      if (response.data.webhook) {
+        $('#webhookinput').value = response.data.webhook;
+      }
     }
+
+    $('#modalSetWebhook').modal({
+      onApprove: function () {
+        setWebhook().then((result) => {
+          if (result.success) {
+            $.toast({
+              class: 'success',
+              message: 'Webhook atualizado com sucesso'
+            });
+          } else {
+            $.toast({
+              class: 'error',
+              message: `Problem setting webhook: ${result.error || 'Unknown error'}`
+            });
+          }
+        }).catch((err) => {
+          $.toast({
+            class: 'error',
+            message: `Erro ao salvar webhook: ${err.message || err}`
+          });
+        });
+
+        // impede submit “normal” do modal
+        return false;
+      }
+    }).modal('show');
+  }).catch((err) => {
+    $.toast({
+      class: 'error',
+      message: `Erro ao carregar webhook: ${err.message || err}`
+    });
   });
 }
+
 
 function modalPairPhone() {
   $('#modalLoginWithCode').modal({
@@ -821,22 +825,29 @@ async function deleteMessage() {
 async function setWebhook() {
   const token = getLocalStorageItem('token');
   const webhook = document.getElementById('webhookinput').value.trim();
-  const events = $('#webhookEvents').dropdown('get value')
-  if (events.includes("All")) {
-    events.length = 0;
-    events.push("All");
-  }
+
+  // Pega eventos selecionados no dropdown (Semantic UI retorna array)
+  const events = $('#webhookEvents').dropdown('get value') || [];
+
   const myHeaders = new Headers();
   myHeaders.append('token', token);
   myHeaders.append('Content-Type', 'application/json');
-  res = await fetch(baseUrl + "/webhook", {
+
+  const payload = {
+    Webhook: webhook,
+    Subscribe: events
+  };
+
+  const res = await fetch(baseUrl + "/webhook", {
     method: "POST",
     headers: myHeaders,
-    body: JSON.stringify({webhookurl: webhook, events: events})
+    body: JSON.stringify(payload)
   });
-  data = await res.json();
+
+  const data = await res.json();
   return data;
 }
+
  
 function doUserAvatar() {
   const userAvatarInput = document.getElementById('useravatarinput');

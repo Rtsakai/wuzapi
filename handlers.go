@@ -2925,7 +2925,7 @@ func (s *server) SendPresence() http.HandlerFunc {
 	}
 }
 
-// Gets avatar info for user
+/// Gets avatar info for user
 func (s *server) GetAvatar() http.HandlerFunc {
 
 	type getAvatarStruct struct {
@@ -2981,10 +2981,8 @@ func (s *server) GetAvatar() http.HandlerFunc {
 					Str("jid", jid.String()).
 					Msg("Avatar oculto pelo usuário; ignorando como erro")
 
-				// devolve algo leve pro caller
-				s.Respond(w, r, http.StatusOK, map[string]interface{}{
-					"hidden": true,
-				})
+				// devolve string (pra bater com o Respond)
+				s.Respond(w, r, http.StatusOK, `{"hidden": true}`)
 				return
 			}
 
@@ -3011,6 +3009,7 @@ func (s *server) GetAvatar() http.HandlerFunc {
 		s.Respond(w, r, http.StatusOK, string(responseJson))
 	}
 }
+
 // Gets all contacts
 func (s *server) GetContacts() http.HandlerFunc {
 

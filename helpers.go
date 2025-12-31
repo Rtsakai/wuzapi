@@ -331,22 +331,47 @@ func callHookWithHmac(myurl string, payload map[string]string, userID string, en
 		if hmacSignature != "" {
 			req.SetHeader("x-hmac-signature", hmacSignature)
 		}
-
 		resp, postErr := req.Post(myurl)
 
 		lastError = postErr
 
 		if postErr != nil {
-			log.Error().Err(postErr).Int("attempt", attempt+1).Str("url", myurl).Msg("Webhook failed due to network/IO error")
+			log.Error().
+				Err(postErr).
+				Int("attempt", attempt+1).
+				Str("url", myurl).
+				Msg("Webhook failed due to network/IO error")
 			continue
 		}
 
 		if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
-			lastError = fmt.Errorf("unexpected status code: %d. Body: %s", resp.StatusCode(), string(resp.Body()))
+			// guarda erro real
+			lastError = fmt.Errorf(
+				"unexpected status code: %d. Body: %s",
+				resp.StatusCode(),
+				string(resp.Body()),
+			)
+
+			// === DEBUG COMPLETO DO WEBHOOK ===
+			payloadBytes, _ := json.Marshal(body)
+			payload4k := payloadBytes
+			if len(payload4k) > 4096 {
+				payload4k = payload4k[:4096]
+			}
+
+			respBody := resp.Body()
+			resp4k := respBody
+			if len(resp4k) > 4096 {
+				resp4k = resp4k[:4096]
+			}
+
 			log.Error().
 				Int("status", resp.StatusCode()).
 				Int("attempt", attempt+1).
 				Str("url", myurl).
+				Int("payload_len", len(payloadBytes)).
+				Str("payload_4k", string(payload4k)).
+				Str("resp_4k", string(resp4k)).
 				Msg("Webhook failed due to non-2xx status code")
 
 			if !*webhookRetryEnabled {

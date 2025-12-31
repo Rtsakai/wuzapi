@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -121,17 +122,73 @@ type HistoryMessage struct {
 }
 
 func (s *server) saveMessageToHistory(userID, chatJID, senderJID, messageID, messageType, textContent, mediaLink, quotedMessageID, dataJson string) error {
+	// RESOLVE LID -> PHONE JID antes de salvar
+	chatJID = resolveLIDToPhoneJIDNoCtx(s.db, chatJID)
+	senderJID = resolveLIDToPhoneJIDNoCtx(s.db, senderJID)
 	query := `INSERT INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              ON CONFLICT (user_id, message_id) DO NOTHING`
+
 	if s.db.DriverName() == "sqlite" {
-		query = `INSERT INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)
+		query = `INSERT OR IGNORE INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	}
+
 	_, err := s.db.Exec(query, userID, chatJID, senderJID, messageID, time.Now(), messageType, textContent, mediaLink, quotedMessageID, dataJson)
 	if err != nil {
 		return fmt.Errorf("failed to save message to history: %w", err)
 	}
 	return nil
+}
+func upsertContactName(db *sqlx.DB, userID, jidPhone, jidLid, pushName, businessName string) error {
+	jidPhone = strings.TrimSpace(jidPhone)
+	jidLid = strings.TrimSpace(jidLid)
+	pushName = strings.TrimSpace(pushName)
+	businessName = strings.TrimSpace(businessName)
+
+	if jidPhone == "" {
+		return fmt.Errorf("upsertContactName: jidPhone vazio")
+	}
+
+	now := time.Now()
+
+	if db.DriverName() == "sqlite" {
+		_, err := db.Exec(`
+			INSERT INTO wa_contacts (user_id, jid_phone, jid_lid, push_name, business_name, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(user_id, jid_phone) DO UPDATE SET
+				jid_lid = COALESCE(excluded.jid_lid, wa_contacts.jid_lid),
+				push_name = COALESCE(NULLIF(excluded.push_name, ''), wa_contacts.push_name),
+				business_name = COALESCE(NULLIF(excluded.business_name, ''), wa_contacts.business_name),
+				updated_at = excluded.updated_at
+		`, userID, jidPhone, nullIfEmpty(jidLid), nullIfEmpty(pushName), nullIfEmpty(businessName), now)
+		if err != nil {
+			return fmt.Errorf("failed to upsert wa_contact (sqlite): %w", err)
+		}
+		return nil
+	}
+
+	_, err := db.Exec(`
+		INSERT INTO wa_contacts (user_id, jid_phone, jid_lid, push_name, business_name, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (user_id, jid_phone) DO UPDATE SET
+			jid_lid = COALESCE(EXCLUDED.jid_lid, wa_contacts.jid_lid),
+			push_name = COALESCE(NULLIF(EXCLUDED.push_name, ''), wa_contacts.push_name),
+			business_name = COALESCE(NULLIF(EXCLUDED.business_name, ''), wa_contacts.business_name),
+			updated_at = EXCLUDED.updated_at
+	`, userID, jidPhone, nullIfEmpty(jidLid), nullIfEmpty(pushName), nullIfEmpty(businessName), now)
+	if err != nil {
+		return fmt.Errorf("failed to upsert wa_contact (postgres): %w", err)
+	}
+	return nil
+}
+
+func nullIfEmpty(s string) any {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func (s *server) trimMessageHistory(userID, chatJID string, limit int) error {
@@ -139,42 +196,56 @@ func (s *server) trimMessageHistory(userID, chatJID string, limit int) error {
 
 	if s.db.DriverName() == "postgres" {
 		queryHistory = `
-            DELETE FROM message_history
-            WHERE id IN (
-                SELECT id FROM message_history
-                WHERE user_id = $1 AND chat_jid = $2
-                ORDER BY timestamp DESC
-                OFFSET $3
-            )`
+			DELETE FROM message_history
+			WHERE id IN (
+				SELECT id
+				FROM message_history
+				WHERE user_id = $1
+				  AND chat_jid = $2
+				ORDER BY timestamp DESC
+				OFFSET $3
+			)
+		`
 
+		// message_id é TEXT e message_history.id é INT -> precisa cast
 		querySecrets = `
-            DELETE FROM whatsmeow_message_secrets
-            WHERE message_id IN (
-                SELECT message_id FROM message_history
-                WHERE user_id = $1 AND chat_jid = $2
-                ORDER BY timestamp DESC
-                OFFSET $3
-            )`
+			DELETE FROM whatsmeow_message_secrets
+			WHERE message_id IN (
+				SELECT id::text
+				FROM message_history
+				WHERE user_id = $1
+				  AND chat_jid = $2
+				ORDER BY timestamp DESC
+				OFFSET $3
+			)
+		`
 	} else { // sqlite
 		queryHistory = `
-            DELETE FROM message_history
-            WHERE id IN (
-                SELECT id FROM message_history
-                WHERE user_id = ? AND chat_jid = ?
-                ORDER BY timestamp DESC
-                LIMIT -1 OFFSET ?
-            )`
+			DELETE FROM message_history
+			WHERE id IN (
+				SELECT id
+				FROM message_history
+				WHERE user_id = ?
+				  AND chat_jid = ?
+				ORDER BY timestamp DESC
+				LIMIT -1 OFFSET ?
+			)
+		`
 
 		querySecrets = `
-            DELETE FROM whatsmeow_message_secrets
-            WHERE message_id IN (
-                SELECT message_id FROM message_history
-                WHERE user_id = ? AND chat_jid = ?
-                ORDER BY timestamp DESC
-                LIMIT -1 OFFSET ?
-            )`
+			DELETE FROM whatsmeow_message_secrets
+			WHERE message_id IN (
+				SELECT CAST(id AS TEXT)
+				FROM message_history
+				WHERE user_id = ?
+				  AND chat_jid = ?
+				ORDER BY timestamp DESC
+				LIMIT -1 OFFSET ?
+			)
+		`
 	}
 
+	// apaga secrets primeiro
 	if _, err := s.db.Exec(querySecrets, userID, chatJID, limit); err != nil {
 		return fmt.Errorf("failed to trim message secrets: %w", err)
 	}

@@ -24,15 +24,21 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/zerolog/log"
 	"github.com/vincent-petithory/dataurl"
-	"go.mau.fi/whatsmeow"
+	"golang.org/x/sync/singleflight"
 
+	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/proto/waCommon"
 	"go.mau.fi/whatsmeow/proto/waE2E"
-
-	"go.mau.fi/whatsmeow/appstate"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
+
+// 1) Cache de "avatar negado" (privacidade) pra não insistir
+var avatarDenyCache = cache.New(12*time.Hour, 30*time.Minute)
+
+// 2) Colapsa chamadas concorrentes pro mesmo user+jid
+var avatarSF singleflight.Group
 
 type Values struct {
 	m map[string]string
@@ -40,6 +46,32 @@ type Values struct {
 
 func (v Values) Get(key string) string {
 	return v.m[key]
+}
+func isHiddenAvatarErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+
+	// privacidade / bloqueio / sem foto
+	if strings.Contains(s, "hidden their profile picture") ||
+		(strings.Contains(s, "profile picture") && strings.Contains(s, "hidden")) ||
+		strings.Contains(s, "privacy") ||
+		strings.Contains(s, "not authorized") ||
+		strings.Contains(s, "forbidden") ||
+		strings.Contains(s, "403") {
+		return true
+	}
+
+	// sem foto (esse é o seu spam)
+	if strings.Contains(s, "does not have a profile picture") ||
+		strings.Contains(s, "no profile picture") ||
+		(strings.Contains(s, "profile picture") && strings.Contains(s, "does not have")) ||
+		(strings.Contains(s, "profile picture") && strings.Contains(s, "not have")) {
+		return true
+	}
+
+	return false
 }
 
 func (s *server) GetHealth() http.HandlerFunc {
@@ -3014,20 +3046,18 @@ func (s *server) GetAvatar() http.HandlerFunc {
 
 		txtid := r.Context().Value("userinfo").(Values).Get("Id")
 
-		if clientManager.GetWhatsmeowClient(txtid) == nil {
+		cli := clientManager.GetWhatsmeowClient(txtid)
+		if cli == nil {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New("no session"))
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		var t getAvatarStruct
-		err := decoder.Decode(&t)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("could not decode Payload"))
 			return
 		}
-
-		if len(t.Phone) < 1 {
+		if strings.TrimSpace(t.Phone) == "" {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("missing Phone in Payload"))
 			return
 		}
@@ -3038,34 +3068,64 @@ func (s *server) GetAvatar() http.HandlerFunc {
 			return
 		}
 
-		var pic *types.ProfilePictureInfo
+		denyKey := txtid + ":" + jid.String()
+		if _, found := avatarDenyCache.Get(denyKey); found {
+			// já sabemos que esse JID bloqueia foto OU não tem foto -> não insiste
+			s.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))
+			return
+		}
 
-		existingID := ""
-		pic, err = clientManager.GetWhatsmeowClient(txtid).GetProfilePictureInfo(context.Background(), jid, &whatsmeow.GetProfilePictureParams{
-			Preview:    t.Preview,
-			ExistingID: existingID,
+		sfKey := "avatar:" + denyKey
+		val, err, _ := avatarSF.Do(sfKey, func() (any, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			defer cancel()
+
+			pic, err := cli.GetProfilePictureInfo(ctx, jid, &whatsmeow.GetProfilePictureParams{
+				Preview:    t.Preview,
+				ExistingID: "",
+			})
+
+			if err != nil {
+				// privacidade/sem foto: arma cooldown e responde 404 (sem logar ERROR em loop)
+				if isHiddenAvatarErr(err) {
+					avatarDenyCache.SetDefault(denyKey, true)
+					log.Debug().Str("jid", jid.String()).Msg("avatar not available; cooling down")
+					return nil, nil
+				}
+				return nil, err
+			}
+
+			return pic, nil
 		})
+
 		if err != nil {
+			// BLINDAGEM: se for "sem foto/privacidade", vira 404 e cacheia (sem ERROR spam)
+			if isHiddenAvatarErr(err) {
+				avatarDenyCache.SetDefault(denyKey, true)
+				s.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))
+				return
+			}
+
 			msg := fmt.Sprintf("failed to get avatar: %v", err)
 			log.Error().Msg(msg)
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(msg))
 			return
 		}
 
+		pic, _ := val.(*types.ProfilePictureInfo)
 		if pic == nil {
-			s.Respond(w, r, http.StatusInternalServerError, errors.New("no avatar found"))
+			s.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))
 			return
 		}
 
 		log.Info().Str("id", pic.ID).Str("url", pic.URL).Msg("Got avatar")
 
-		responseJson, err := json.Marshal(pic)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
+		b, jerr := json.Marshal(pic)
+		if jerr != nil {
+			s.Respond(w, r, http.StatusInternalServerError, jerr)
+			return
 		}
-		return
+		s.Respond(w, r, http.StatusOK, string(b))
 	}
 }
 
@@ -5857,10 +5917,12 @@ func (s *server) GetHistory() http.HandlerFunc {
 			}
 		}
 		chatJID := r.URL.Query().Get("chat_jid")
+
 		if chatJID == "" {
 			s.Respond(w, r, http.StatusBadRequest, errors.New("chat_jid is required"))
 			return
 		}
+		chatJID = resolveLIDToPhoneJIDNoCtx(s.db, chatJID)
 
 		// If chat_jid is "index", return mapping of all instances to their chat_jids
 		if chatJID == "index" {
@@ -5884,12 +5946,16 @@ func (s *server) GetHistory() http.HandlerFunc {
 				ChatJID         string `json:"chat_jid" db:"chat_jid"`
 				LastMessageTime string `json:"last_message_time" db:"last_message_time"`
 			}
-
 			var mappings []ChatMapping
 			err := s.db.Select(&mappings, query)
 			if err != nil {
 				s.Respond(w, r, http.StatusInternalServerError, fmt.Errorf("failed to get chat mappings: %w", err))
 				return
+			}
+
+			// NORMALIZA chat_jid (@lid -> @s.whatsapp.net)
+			for i := range mappings {
+				mappings[i].ChatJID = resolveLIDToPhoneJIDNoCtx(s.db, mappings[i].ChatJID)
 			}
 
 			// Build the response map with chats ordered by most recent message

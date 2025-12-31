@@ -797,13 +797,29 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		log.Info().Msg("Received StreamReplaced event")
 		return
 	case *events.Message:
+		// --- NORMALIZA LID -> PHONE JID NO EVENTO ENVIADO PRO WEBHOOK ---
+		fixed := *evt // shallow copy
+
+		senderStr := resolveLIDToPhoneJIDNoCtx(mycli.db, fixed.Info.Sender.String())
+		chatStr := resolveLIDToPhoneJIDNoCtx(mycli.db, fixed.Info.Chat.String())
+
+		if sj, err := types.ParseJID(senderStr); err == nil {
+			fixed.Info.Sender = sj
+		}
+		if cj, err := types.ParseJID(chatStr); err == nil {
+			fixed.Info.Chat = cj
+		}
+
+		// IMPORTANTE: sobrescreve o evento do webhook
+		postmap["event"] = &fixed
 
 		var s3Config struct {
 			Enabled       string `db:"s3_enabled"`
 			MediaDelivery string `db:"media_delivery"`
 		}
 
-		lastMessageCache.Set(mycli.userID, &evt.Info, cache.DefaultExpiration)
+		// (opcional, mas recomendado) cache com o JID já normalizado
+		lastMessageCache.Set(mycli.userID, &fixed.Info, cache.DefaultExpiration)
 		myuserinfo, found := userinfocache.Get(mycli.token)
 		if !found {
 			err := mycli.db.Get(&s3Config, "SELECT CASE WHEN s3_enabled = 1 THEN 'true' ELSE 'false' END AS s3_enabled, media_delivery FROM users WHERE id = $1", txtid)
@@ -864,14 +880,13 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					log.Error().Err(err).Msg("Failed to save image to temporary file")
 					return
 				}
-
 				// Process S3 upload if enabled
 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {
-					// Get sender JID for inbox/outbox determination
-					isIncoming := evt.Info.IsFromMe == false
-					contactJID := evt.Info.Sender.String()
-					if evt.Info.IsGroup {
-						contactJID = evt.Info.Chat.String()
+					// Get sender JID for inbox/outbox determination (NORMALIZADO)
+					isIncoming := fixed.Info.IsFromMe == false
+					contactJID := fixed.Info.Sender.String()
+					if fixed.Info.IsGroup {
+						contactJID = fixed.Info.Chat.String()
 					}
 
 					// Process S3 upload
@@ -879,7 +894,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 						context.Background(),
 						txtid,
 						contactJID,
-						evt.Info.ID,
+						fixed.Info.ID,
 						data,
 						img.GetMimetype(),
 						filepath.Base(tmpPath),
@@ -891,7 +906,6 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 						postmap["s3"] = s3Data
 					}
 				}
-
 				// Convert the image to base64 if needed
 				if s3Config.MediaDelivery == "base64" || s3Config.MediaDelivery == "both" {
 					base64String, mimeType, err := fileToBase64(tmpPath)
@@ -1180,7 +1194,6 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					log.Info().Str("path", tmpPath).Msg("Temporary file deleted")
 				}
 			}
-
 			sticker := evt.Message.GetStickerMessage()
 			if sticker != nil {
 				tmpDirectory := filepath.Join("/tmp", "user_"+txtid)
@@ -1190,11 +1203,45 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					return
 				}
 
-				// download the sticker using the DownloadableMessage interface
-				data, err := mycli.WAClient.Download(context.Background(), sticker)
+				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+				defer cancel()
+
+				// DEBUG que mata a charada: url/directpath/auth
+				stURL := sticker.GetURL()
+				stDP := sticker.GetDirectPath()
+
+				log.Debug().
+					Str("sticker_url", stURL).
+					Str("sticker_direct_path", stDP).
+					Bool("directpath_has_auth", strings.Contains(stDP, "auth=")).
+					Int("media_key_len", len(sticker.GetMediaKey())).
+					Msg("Sticker download debug")
+
+				// 1) tentativa normal
+				data, err := mycli.WAClient.Download(ctx, sticker)
+
+				// 2) fallback: se falhar (principalmente 403), força DirectPath
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to download sticker")
-					return
+					errStr := err.Error()
+					if strings.Contains(errStr, "status code 403") || strings.Contains(errStr, "403") {
+						// faz uma cópia e zera a URL pra não tentar baixar por URL ruim
+						st2 := *sticker
+						empty := ""
+						st2.URL = &empty // força cair no DirectPath
+
+						// retry curtinho (porque mediaConn/auth às vezes “vira”)
+						for i := 0; i < 2; i++ {
+							time.Sleep(time.Duration(250*(i+1)) * time.Millisecond)
+							data, err = mycli.WAClient.Download(ctx, &st2)
+							if err == nil {
+								break
+							}
+						}
+					}
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to download sticker (after fallback)")
+						return
+					}
 				}
 
 				// tries to infer extension by mimetype; fallback to .webp
@@ -1218,7 +1265,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 						contactJID = evt.Info.Chat.String()
 					}
 					s3Data, err := GetS3Manager().ProcessMediaForS3(
-						context.Background(),
+						ctx,
 						txtid,
 						contactJID,
 						evt.Info.ID,
@@ -1752,10 +1799,25 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		postmap["type"] = "ConnectFailure"
 		dowebhook = 1
 		log.Error().Str("reason", fmt.Sprintf("%+v", evt)).Msg("Failed to connect to Whatsapp")
+
 	case *events.UndecryptableMessage:
-		postmap["type"] = "UndecryptableMessage"
-		dowebhook = 1
-		log.Warn().Str("info", evt.Info.SourceString()).Msg("Undecryptable message received")
+		info := evt.Info
+
+		senderStr := resolveLIDToPhoneJIDNoCtx(mycli.db, info.Sender.String())
+		chatStr := resolveLIDToPhoneJIDNoCtx(mycli.db, info.Chat.String())
+
+		if sj, err := types.ParseJID(senderStr); err == nil {
+			info.Sender = sj
+		}
+		if cj, err := types.ParseJID(chatStr); err == nil {
+			info.Chat = cj
+		}
+
+		log.Warn().
+			Str("chat", info.Chat.String()).
+			Str("sender", info.Sender.String()).
+			Msg("Undecryptable message received")
+
 	case *events.MediaRetry:
 		postmap["type"] = "MediaRetry"
 		dowebhook = 1
@@ -1844,9 +1906,54 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		postmap["type"] = "FBMessage"
 		dowebhook = 1
 		log.Info().Str("info", evt.Info.SourceString()).Msg("Facebook message received")
+
+	case *events.Contact:
+		// evt tem só: JID, Timestamp, Action, FromFullSync
+		log.Debug().
+			Str("jid", evt.JID.String()).
+			Bool("fromFullSync", evt.FromFullSync).
+			Msg("Contact event")
+
+		// opcional: webhook
+		postmap["type"] = "Contact"
+		postmap["event"] = evt
+		dowebhook = 1
+	case *events.PushName:
+		jidLid := evt.JID.String()
+		jidPhone := evt.JIDAlt.String()
+
+		if jidPhone == "" || strings.Contains(jidPhone, "@lid") {
+			jidPhone = resolveLIDToPhoneJIDNoCtx(mycli.db, jidLid)
+		} else {
+			jidPhone = resolveLIDToPhoneJIDNoCtx(mycli.db, jidPhone)
+		}
+
+		if !strings.Contains(jidLid, "@lid") {
+			jidLid = ""
+		}
+
+		if err := upsertContactName(mycli.db, txtid, jidPhone, jidLid, evt.NewPushName, ""); err != nil {
+			log.Warn().Err(err).Str("jid", jidPhone).Msg("failed to upsert PushName")
+		}
+
+	case *events.BusinessName:
+		jidLid := evt.JID.String()
+		jidPhone := resolveLIDToPhoneJIDNoCtx(mycli.db, jidLid)
+
+		if !strings.Contains(jidLid, "@lid") {
+			jidLid = ""
+		}
+
+		if err := upsertContactName(mycli.db, txtid, jidPhone, jidLid, "", evt.NewBusinessName); err != nil {
+			log.Warn().Err(err).Str("jid", jidPhone).Msg("failed to upsert BusinessName")
+		}
+
 	default:
-		log.Warn().Str("event", fmt.Sprintf("%+v", evt)).Msg("Unhandled event")
-	}
+		log.Warn().
+			Str("go_type", fmt.Sprintf("%T", evt)).
+			Str("event", fmt.Sprintf("%+v", evt)).
+			Msg("Unhandled event")
+	} // <<< FECHA O SWITCH AQUI
 
 	if dowebhook == 1 {
 		sendEventWithWebHook(mycli, postmap, path)

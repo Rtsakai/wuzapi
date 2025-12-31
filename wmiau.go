@@ -1947,15 +1947,34 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		if err := upsertContactName(mycli.db, txtid, jidPhone, jidLid, "", evt.NewBusinessName); err != nil {
 			log.Warn().Err(err).Str("jid", jidPhone).Msg("failed to upsert BusinessName")
 		}
-
 	default:
 		log.Warn().
 			Str("go_type", fmt.Sprintf("%T", evt)).
 			Str("event", fmt.Sprintf("%+v", evt)).
 			Msg("Unhandled event")
-	} // <<< FECHA O SWITCH AQUI
+	}
+	if dowebhook == 1 && postmap != nil {
 
-	if dowebhook == 1 {
-		sendEventWithWebHook(mycli, postmap, path)
+		// corta status (stories) - pega Chat e chat
+		if chat, ok := postmap["Chat"].(string); ok && chat == "status@broadcast" {
+			dowebhook = 0
+		} else if chat, ok := postmap["chat"].(string); ok && chat == "status@broadcast" {
+			dowebhook = 0
+		}
+
+		// corta eventos chatos
+		if dowebhook == 1 {
+			if t, ok := postmap["type"].(string); ok {
+				switch t {
+				case "ChatPresence", "Presence", "UserAbout":
+					dowebhook = 0
+				}
+			}
+		}
+
+		// envia o que sobrou
+		if dowebhook == 1 {
+			sendEventWithWebHook(mycli, postmap, path)
+		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -27,7 +28,7 @@ var migrations = []Migration{
 	{ID: 9, Name: "add_wa_contacts", UpSQL: addWAContactsSQL},
 }
 
-/* ===================== SQL BLOBS ===================== */
+/* ===================== SQL BLOBS (POSTGRES) ===================== */
 
 const initialSchemaSQL = `
 DO $$
@@ -199,6 +200,83 @@ BEGIN
 END $$;
 `
 
+/* ===================== SQLITE COMPAT ===================== */
+
+const sqliteNoopSQL = `SELECT 1;`
+
+// No SQLite não existe DO $$ / information_schema.
+// Então: a migration 1 cria o schema "completo" (incluindo colunas/tabelas das migrações posteriores).
+// As migrações 2..9 viram no-op, mas ainda são marcadas como aplicadas.
+const initialSchemaSQLiteSQL = `
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  token TEXT NOT NULL,
+  webhook TEXT NOT NULL DEFAULT '',
+  jid TEXT NOT NULL DEFAULT '',
+  qrcode TEXT NOT NULL DEFAULT '',
+  connected INTEGER,
+  expiration INTEGER,
+  events TEXT NOT NULL DEFAULT '',
+  proxy_url TEXT DEFAULT '',
+
+  s3_enabled INTEGER DEFAULT 0,
+  s3_endpoint TEXT DEFAULT '',
+  s3_region TEXT DEFAULT '',
+  s3_bucket TEXT DEFAULT '',
+  s3_access_key TEXT DEFAULT '',
+  s3_secret_key TEXT DEFAULT '',
+  s3_path_style INTEGER DEFAULT 1,
+  s3_public_url TEXT DEFAULT '',
+  media_delivery TEXT DEFAULT 'base64',
+  s3_retention_days INTEGER DEFAULT 30,
+
+  history INTEGER DEFAULT 0,
+  hmac_key BLOB
+);
+
+CREATE TABLE IF NOT EXISTS message_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  chat_jid TEXT NOT NULL,
+  sender_jid TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  timestamp DATETIME NOT NULL,
+  message_type TEXT NOT NULL,
+  text_content TEXT,
+  media_link TEXT,
+  quoted_message_id TEXT,
+  datajson TEXT,
+  UNIQUE(user_id, message_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_history_user_chat_timestamp
+  ON message_history (user_id, chat_jid, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS wa_contacts (
+  user_id TEXT NOT NULL,
+  jid_phone TEXT NOT NULL,
+  jid_lid TEXT,
+  push_name TEXT,
+  business_name TEXT,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id, jid_phone)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wa_contacts_user_lid
+  ON wa_contacts (user_id, jid_lid);
+`
+
+func upSQLFor(db *sqlx.DB, m Migration) string {
+	if db.DriverName() == "sqlite" {
+		if m.ID == 1 {
+			return initialSchemaSQLiteSQL
+		}
+		return sqliteNoopSQL
+	}
+	return m.UpSQL
+}
+
 /* ===================== INIT ===================== */
 
 func initializeSchema(db *sqlx.DB) error {
@@ -265,28 +343,12 @@ func applyMigration(db *sqlx.DB, m Migration) error {
 		return err
 	}
 
-	if db.DriverName() == "sqlite" && m.ID == 9 {
-		err = createTableIfNotExistsSQLite(tx, "wa_contacts", `
-			CREATE TABLE wa_contacts (
-				user_id TEXT NOT NULL,
-				jid_phone TEXT NOT NULL,
-				jid_lid TEXT,
-				push_name TEXT,
-				business_name TEXT,
-				updated_at DATETIME NOT NULL,
-				PRIMARY KEY (user_id, jid_phone)
-			)`)
-		if err == nil {
-			_, err = tx.Exec(`
-				CREATE INDEX IF NOT EXISTS idx_wa_contacts_user_lid
-				ON wa_contacts (user_id, jid_lid)`)
-		}
-	} else {
-		_, err = tx.Exec(m.UpSQL)
+	sql := strings.TrimSpace(upSQLFor(db, m))
+	if sql != "" {
+		_, err = tx.Exec(sql)
 	}
-
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -297,23 +359,11 @@ func applyMigration(db *sqlx.DB, m Migration) error {
 	}
 
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
 	return tx.Commit()
-}
-
-func createTableIfNotExistsSQLite(tx *sqlx.Tx, table, sql string) error {
-	var c int
-	if err := tx.Get(&c, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table); err != nil {
-		return err
-	}
-	if c == 0 {
-		_, err := tx.Exec(sql)
-		return err
-	}
-	return nil
 }
 
 /* ===================== UTIL ===================== */

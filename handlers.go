@@ -24,7 +24,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/rs/zerolog/log"
 	"github.com/vincent-petithory/dataurl"
-	"golang.org/x/sync/singleflight"
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/appstate"
@@ -34,44 +33,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// 1) Cache de "avatar negado" (privacidade) pra não insistir
-var avatarDenyCache = cache.New(12*time.Hour, 30*time.Minute)
-
-// 2) Colapsa chamadas concorrentes pro mesmo user+jid
-var avatarSF singleflight.Group
-
 type Values struct {
 	m map[string]string
 }
 
 func (v Values) Get(key string) string {
 	return v.m[key]
-}
-func isHiddenAvatarErr(err error) bool {
-	if err == nil {
-		return false
-	}
-	s := strings.ToLower(err.Error())
-
-	// privacidade / bloqueio / sem foto
-	if strings.Contains(s, "hidden their profile picture") ||
-		(strings.Contains(s, "profile picture") && strings.Contains(s, "hidden")) ||
-		strings.Contains(s, "privacy") ||
-		strings.Contains(s, "not authorized") ||
-		strings.Contains(s, "forbidden") ||
-		strings.Contains(s, "403") {
-		return true
-	}
-
-	// sem foto (esse é o seu spam)
-	if strings.Contains(s, "does not have a profile picture") ||
-		strings.Contains(s, "no profile picture") ||
-		(strings.Contains(s, "profile picture") && strings.Contains(s, "does not have")) ||
-		(strings.Contains(s, "profile picture") && strings.Contains(s, "not have")) {
-		return true
-	}
-
-	return false
 }
 
 func (s *server) GetHealth() http.HandlerFunc {
@@ -842,13 +809,13 @@ func (s *server) GetStatus() http.HandlerFunc {
 func (s *server) SendDocument() http.HandlerFunc {
 
 	type documentStruct struct {
-		Caption     string
-		Phone       string
-		Document    string
-		FileName    string
-		Id          string
-		MimeType    string
-		ContextInfo waE2E.ContextInfo
+		Caption       string
+		Phone         string
+		Document      string
+		FileName      string
+		Id            string
+		MimeType      string
+		ContextInfo   waE2E.ContextInfo
 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`
 	}
 
@@ -997,15 +964,15 @@ func (s *server) SendDocument() http.HandlerFunc {
 func (s *server) SendAudio() http.HandlerFunc {
 
 	type audioStruct struct {
-		Phone       string
-		Audio       string
-		Caption     string
-		Id          string
-		PTT         *bool  `json:"ptt,omitempty"`
-		MimeType    string `json:"mimetype,omitempty"`
-		Seconds     uint32
-		Waveform    []byte
-		ContextInfo waE2E.ContextInfo
+		Phone         string
+		Audio         string
+		Caption       string
+		Id            string
+		PTT           *bool  `json:"ptt,omitempty"`
+		MimeType      string `json:"mimetype,omitempty"`
+		Seconds       uint32
+		Waveform      []byte
+		ContextInfo   waE2E.ContextInfo
 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`
 	}
 
@@ -1679,11 +1646,11 @@ func (s *server) SendVideo() http.HandlerFunc {
 func (s *server) SendContact() http.HandlerFunc {
 
 	type contactStruct struct {
-		Phone       string
-		Id          string
-		Name        string
-		Vcard       string
-		ContextInfo waE2E.ContextInfo
+		Phone         string
+		Id            string
+		Name          string
+		Vcard         string
+		ContextInfo   waE2E.ContextInfo
 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`
 	}
 
@@ -1796,12 +1763,12 @@ func (s *server) SendContact() http.HandlerFunc {
 func (s *server) SendLocation() http.HandlerFunc {
 
 	type locationStruct struct {
-		Phone       string
-		Id          string
-		Name        string
-		Latitude    float64
-		Longitude   float64
-		ContextInfo waE2E.ContextInfo
+		Phone         string
+		Id            string
+		Name          string
+		Latitude      float64
+		Longitude     float64
+		ContextInfo   waE2E.ContextInfo
 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`
 	}
 
@@ -2227,8 +2194,8 @@ func (s *server) SendMessage() http.HandlerFunc {
 		LinkPreview   bool
 		Id            string
 		ContextInfo   waE2E.ContextInfo
-		QuotedText    string          `json:"QuotedText,omitempty"`
-		QuotedMessage *waE2E.Message  `json:"QuotedMessage,omitempty"`
+		QuotedText    string         `json:"QuotedText,omitempty"`
+		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		txtid := r.Context().Value("userinfo").(Values).Get("Id")

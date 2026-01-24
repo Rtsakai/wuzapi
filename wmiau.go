@@ -42,6 +42,40 @@ type MyClient struct {
 	db             *sqlx.DB
 	s              *server
 }
+func downloadWithRetry(
+    ctx context.Context,
+    cli *whatsmeow.Client,
+    media whatsmeow.DownloadableMessage,
+) ([]byte, error) {
+
+    var lastErr error
+    delays := []time.Duration{
+        2 * time.Second,
+        5 * time.Second,
+        10 * time.Second,
+    }
+
+    for i, d := range delays {
+        data, err := cli.Download(ctx, media)
+        if err == nil {
+            if i > 0 {
+                log.Warn().Int("attempt", i+1).Msg("Media download succeeded after retry")
+            }
+            return data, nil
+        }
+
+        lastErr = err
+        log.Warn().
+            Err(err).
+            Int("attempt", i+1).
+            Dur("retry_in", d).
+            Msg("Failed to download media, retrying")
+
+        time.Sleep(d)
+    }
+
+    return nil, lastErr
+}
 
 func sendToGlobalWebHook(jsonData []byte, token string, userID string) {
 	jsonDataStr := string(jsonData)
@@ -864,10 +898,14 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 				}
 
 				// Download the image
-				data, err := mycli.WAClient.Download(context.Background(), img)
+				//data, err := mycli.WAClient.Download(context.Background(), img)
+				data, err := downloadWithRetry(context.Background(), mycli.WAClient, img)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to download image")
-					return
+					log.Error().
+						Err(err).
+						Str("messageID", evt.Info.ID).
+						Msg("Media download failed after retries")
+						return
 				}
 
 				// Determine the file extension based on the MIME type

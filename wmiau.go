@@ -30,6 +30,8 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"golang.org/x/net/proxy"
+
+
 )
 
 // db field declaration as *sqlx.DB
@@ -1057,7 +1059,6 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					log.Info().Str("path", tmpPath).Msg("Temporary file deleted")
 				}
 			}
-
 			// try to get Document if any
 			document := evt.Message.GetDocumentMessage()
 			if document != nil {
@@ -1070,12 +1071,38 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 				}
 
 				// Download the document
-				data, err := mycli.WAClient.Download(context.Background(), document)
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+				defer cancel()
+
+				data, err := mycli.WAClient.Download(ctx, document)
+				if err != nil && strings.Contains(err.Error(), "status code 403") {
+					// fallback: força usar DirectPath (evita URL mmg com ?ccb=...)
+					docCopy := *document // cópia por valor da struct
+
+					// se DirectPath estiver vazio, tenta extrair do URL
+					if (docCopy.DirectPath == nil || docCopy.GetDirectPath() == "") && docCopy.GetUrl() != "" {
+						if u, perr := url.Parse(docCopy.GetUrl()); perr == nil && u.Path != "" {
+							dp := u.Path
+							docCopy.DirectPath = &dp // seta o ponteiro com uma string local
+						}
+					}
+
+					// zera a URL pra não insistir no link mmg direto
+					docCopy.Url = nil
+
+					data, err = mycli.WAClient.Download(ctx, &docCopy)
+				}
+
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to download document")
+					log.Error().
+						Err(err).
+						Str("url", document.GetUrl()).
+						Str("directPath", document.GetDirectPath()).
+						Msg("Failed to download document (after fallback)")
 					return
 				}
 
+			
 				// Determine the file extension
 				extension := ""
 				exts, err := mime.ExtensionsByType(document.GetMimetype())

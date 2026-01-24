@@ -3319,16 +3319,43 @@ func (s *server) DownloadDocument() http.HandlerFunc {
 		}}
 
 		doc := msg.GetDocumentMessage()
-
 		if doc != nil {
-			docdata, err = clientManager.GetWhatsmeowClient(txtid).Download(context.Background(), doc)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			docdata, err = clientManager.GetWhatsmeowClient(txtid).Download(ctx, doc)
+
+			if err != nil && strings.Contains(err.Error(), "status code 403") {
+				// fallback: força DirectPath e evita baixar via URL mmg
+				doc2 := proto.Clone(doc).(*waE2E.DocumentMessage)
+
+				// se DirectPath estiver vazio, tenta extrair do URL
+				if (doc2.DirectPath == nil || doc2.GetDirectPath() == "") && doc2.GetUrl() != "" {
+					if u, perr := url.Parse(doc2.GetUrl()); perr == nil && u.Path != "" {
+						doc2.DirectPath = proto.String(u.Path)
+					}
+				}
+
+				// zera URL pra não insistir no mmg link direto
+				doc2.Url = nil
+
+				docdata, err = clientManager.GetWhatsmeowClient(txtid).Download(ctx, doc2)
+			}
+
 			if err != nil {
-				log.Error().Str("error", fmt.Sprintf("%v", err)).Msg("failed to download document")
-				msg := fmt.Sprintf("failed to download document %v", err)
-				s.Respond(w, r, http.StatusInternalServerError, errors.New(msg))
+				log.Error().
+					Err(err).
+					Str("url", doc.GetUrl()).
+					Str("directPath", doc.GetDirectPath()).
+					Msg("failed to download document (after fallback)")
+				s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("failed to download document %v", err)))
 				return
 			}
 			mimetype = doc.GetMimetype()
+			if mimetype == "" {
+				mimetype = t.Mimetype
+			}
+
 		}
 
 		dataURL := dataurl.New(docdata, mimetype)

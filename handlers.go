@@ -2012,7 +2012,7 @@ func (s *server) SendLocation() http.HandlerFunc {
 	}
 }
 
-// Sends Buttons (not implemented, does not work)
+// Sends a legacy buttons message. Behavior depends on current WhatsApp client support.
 func (s *server) SendButtons() http.HandlerFunc {
 
 	type buttonStruct struct {

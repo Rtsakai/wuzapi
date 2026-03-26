@@ -73,6 +73,7 @@ var (
 	webhookErrorQueueName    = flag.String("errorqueue", "webhook_errors", "RabbitMQ queue name for failed webhooks")
 	publishSentMessages      = flag.Bool("publishsent", true, "Publish sent messages to global RabbitMQ events")
 	autoWAVersion            = flag.Bool("autowaversion", true, "Fetch the latest WhatsApp Web version on startup")
+	revokeSentMaxAgeMinutes  = flag.Int("revokesentmaxageminutes", 0, "Maximum local age in minutes for revoking tracked sent messages; <=0 relies on WhatsApp server policy")
 
 	container        *sqlstore.Container
 	clientManager    = NewClientManager()
@@ -223,6 +224,11 @@ func main() {
 	if v := os.Getenv("WUZAPI_AUTO_WA_VERSION"); v != "" {
 		*autoWAVersion = strings.ToLower(v) == "true" || v == "1"
 	}
+	if v := os.Getenv("WUZAPI_REVOKE_SENT_MAX_AGE_MINUTES"); v != "" {
+		if minutes, err := strconv.Atoi(v); err == nil {
+			*revokeSentMaxAgeMinutes = minutes
+		}
+	}
 
 	log.Info().
 		Bool("enabled", *webhookRetryEnabled).
@@ -230,6 +236,7 @@ func main() {
 		Int("delay", *webhookRetryDelaySeconds).
 		Bool("publish_sent", *publishSentMessages).
 		Bool("auto_wa_version", *autoWAVersion).
+		Int("revoke_sent_max_age_minutes", *revokeSentMaxAgeMinutes).
 		Str("queue", *webhookErrorQueueName).
 		Msg("Webhook Retry Configured")
 

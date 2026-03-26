@@ -188,6 +188,28 @@ func (s *server) publishSentMessageFromRequest(r *http.Request, txtid string, re
 	s.publishSentMessageEvent(userinfo.Get("Token"), userinfo.Get("Id"), txtid, recipient, msgid, msg, timestamp, messageTypeOverride...)
 }
 
+func (s *server) respondWithSentMessage(w http.ResponseWriter, r *http.Request, recipient types.JID, msgid, messageType string, timestamp time.Time, details string) {
+	if details == "" {
+		details = "Sent"
+	}
+
+	response := map[string]interface{}{
+		"Details":     details,
+		"Timestamp":   timestamp.Unix(),
+		"Id":          msgid,
+		"Chat":        recipient.String(),
+		"MessageType": messageType,
+	}
+
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		s.Respond(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	s.Respond(w, r, http.StatusOK, string(responseJSON))
+}
+
 func (s *server) GetHealth() http.HandlerFunc {
 	type HealthResponse struct {
 		Status            string                 `json:"status"`
@@ -1097,13 +1119,7 @@ func (s *server) SendDocument() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "document", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -1264,13 +1280,7 @@ func (s *server) SendAudio() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "audio", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -1463,13 +1473,7 @@ func (s *server) SendImage() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "image", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -1613,13 +1617,7 @@ func (s *server) SendSticker() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "sticker", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -1783,13 +1781,7 @@ func (s *server) SendVideo() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "video", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -1901,13 +1893,7 @@ func (s *server) SendContact() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "contact", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -2021,13 +2007,7 @@ func (s *server) SendLocation() http.HandlerFunc {
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "location", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -2126,15 +2106,12 @@ func (s *server) SendButtons() http.HandlerFunc {
 			return
 		}
 
+		historyStr := r.Context().Value("userinfo").(Values).Get("History")
+		historyLimit, _ := strconv.Atoi(historyStr)
+		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "buttons", t.Title, "", historyLimit)
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "buttons", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -2275,19 +2252,12 @@ func (s *server) SendList() http.HandlerFunc {
 			return
 		}
 
+		historyStr := r.Context().Value("userinfo").(Values).Get("History")
+		historyLimit, _ := strconv.Atoi(historyStr)
+		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "list", req.TopText, "", historyLimit)
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message list sent")
-		response := map[string]interface{}{
-			"Details":   "Sent",
-			"Timestamp": resp.Timestamp,
-			"Id":        msgid,
-		}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "list", resp.Timestamp, "Sent")
 	}
 }
 
@@ -2456,13 +2426,7 @@ func (s *server) SendMessage() http.HandlerFunc {
 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "text", t.Body, "", historyLimit)
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, msg, resp.Timestamp)
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "text", resp.Timestamp, "Sent")
 		return
 	}
 }
@@ -2528,16 +2492,12 @@ func (s *server) SendPoll() http.HandlerFunc {
 			return
 		}
 
+		historyStr := r.Context().Value("userinfo").(Values).Get("History")
+		historyLimit, _ := strconv.Atoi(historyStr)
+		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "poll", req.Header, "", historyLimit)
 		s.publishSentMessageFromRequest(r, txtid, recipient, msgid, pollMessage, resp.Timestamp, "poll")
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Poll sent")
-
-		response := map[string]interface{}{"Details": "Poll sent successfully", "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "poll", resp.Timestamp, "Poll sent successfully")
 	}
 }
 
@@ -2587,6 +2547,40 @@ func (s *server) DeleteMessage() http.HandlerFunc {
 			return
 		}
 
+		historyRepo := NewHistoryRepository(s.db)
+		validationStatus := "server_policy_only"
+		historyMessage, err := historyRepo.GetMessageByID(txtid, msgid)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("failed to validate message history: %v", err)))
+				return
+			}
+
+			log.Warn().
+				Str("userID", txtid).
+				Str("messageID", msgid).
+				Msg("Sent message history not found for revoke; deferring validation to WhatsApp server policy")
+		} else {
+			requestedChatJID := normalizeChatJID(s.db, recipient.String())
+			if historyMessage.ChatJID != "" && requestedChatJID != historyMessage.ChatJID {
+				s.Respond(w, r, http.StatusConflict, errors.New("message id does not belong to the provided chat"))
+				return
+			}
+
+			if historyMessage.SenderJID != "me" {
+				s.Respond(w, r, http.StatusConflict, errors.New("message was not sent by this agent"))
+				return
+			}
+
+			maxAge := configuredSentRevokeMaxAge()
+			if !isTrackedMessageWithinRevokeWindow(historyMessage.Timestamp, time.Now(), maxAge) {
+				s.Respond(w, r, http.StatusConflict, errors.New("message is older than the configured local revoke window"))
+				return
+			}
+
+			validationStatus = "validated_sent_history"
+		}
+
 		resp, err = clientManager.GetWhatsmeowClient(txtid).SendMessage(context.Background(), recipient, clientManager.GetWhatsmeowClient(txtid).BuildRevoke(recipient, types.EmptyJID, msgid))
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("error sending message: %v", err)))
@@ -2594,7 +2588,12 @@ func (s *server) DeleteMessage() http.HandlerFunc {
 		}
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message deleted")
-		response := map[string]interface{}{"Details": "Deleted", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
+		response := map[string]interface{}{
+			"Details":    "Deleted",
+			"Timestamp":  resp.Timestamp.Unix(),
+			"Id":         msgid,
+			"Validation": validationStatus,
+		}
 		responseJson, err := json.Marshal(response)
 		if err != nil {
 			s.Respond(w, r, http.StatusInternalServerError, err)
@@ -2687,13 +2686,7 @@ func (s *server) SendEditMessage() http.HandlerFunc {
 		}
 
 		log.Info().Str("timestamp", fmt.Sprintf("%d", resp.Timestamp.Unix())).Str("id", msgid).Msg("Message edit sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "edit", resp.Timestamp, "Sent")
 
 		return
 	}
@@ -3727,13 +3720,7 @@ func (s *server) React() http.HandlerFunc {
 		}
 
 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")
-		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}
-		responseJson, err := json.Marshal(response)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, err)
-		} else {
-			s.Respond(w, r, http.StatusOK, string(responseJson))
-		}
+		s.respondWithSentMessage(w, r, recipient, msgid, "reaction", resp.Timestamp, "Sent")
 
 		return
 	}

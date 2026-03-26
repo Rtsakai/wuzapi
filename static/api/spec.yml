@@ -886,7 +886,7 @@ paths:
       tags:
         - Chat 
       summary: Deletes a message sent by user
-      description: Deletes a messages sent by the same user
+      description: Deletes a message previously sent by the same user or agent. When message history is available, the API validates ownership before asking WhatsApp to revoke it. WhatsApp server policy still decides whether the revoke is accepted.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -902,7 +902,7 @@ paths:
           content:
             application/json:
               schema:
-                example: { "code": 200, "data": { "Details": "Message deleted" }, "success": true }
+                example: { "code": 200, "data": { "Details": "Deleted", "Timestamp": 1774531200, "Id": "1234-abcd-21234", "Validation": "validated_sent_history" }, "success": true }
   /chat/markread:
     post:
       tags:

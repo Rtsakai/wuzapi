@@ -43,6 +43,32 @@ func (r *HistoryRepository) SaveMessage(s *server, userID, chatJID, senderJID, m
 	return s.saveMessageToHistory(userID, chatJID, senderJID, messageID, messageType, textContent, mediaLink, quotedMessageID, dataJSON)
 }
 
+func (r *HistoryRepository) GetMessageByID(userID, messageID string) (HistoryMessage, error) {
+	var msg HistoryMessage
+	query := `
+		SELECT id, user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, COALESCE(quoted_message_id, '') as quoted_message_id, COALESCE(datajson, '') as datajson
+		FROM message_history
+		WHERE user_id = $1 AND message_id = $2
+		LIMIT 1`
+
+	if r.db.DriverName() == "sqlite" {
+		query = `
+			SELECT id, user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, COALESCE(quoted_message_id, '') as quoted_message_id, COALESCE(datajson, '') as datajson
+			FROM message_history
+			WHERE user_id = ? AND message_id = ?
+			LIMIT 1`
+	}
+
+	err := r.db.Get(&msg, query, userID, messageID)
+	if err != nil {
+		return HistoryMessage{}, err
+	}
+
+	msg.ChatJID = normalizeChatJID(r.db, msg.ChatJID)
+	msg.SenderJID = normalizeChatJID(r.db, msg.SenderJID)
+	return msg, nil
+}
+
 func (r *ContactRepository) UpsertContactName(userID, jidPhone, jidLid, pushName, businessName string) error {
 	return upsertContactName(r.db, userID, jidPhone, jidLid, pushName, businessName)
 }

@@ -30,8 +30,6 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"golang.org/x/net/proxy"
-
-
 )
 
 // db field declaration as *sqlx.DB
@@ -44,39 +42,40 @@ type MyClient struct {
 	db             *sqlx.DB
 	s              *server
 }
+
 func downloadWithRetry(
-    ctx context.Context,
-    cli *whatsmeow.Client,
-    media whatsmeow.DownloadableMessage,
+	ctx context.Context,
+	cli *whatsmeow.Client,
+	media whatsmeow.DownloadableMessage,
 ) ([]byte, error) {
 
-    var lastErr error
-    delays := []time.Duration{
-        2 * time.Second,
-        5 * time.Second,
-        10 * time.Second,
-    }
+	var lastErr error
+	delays := []time.Duration{
+		2 * time.Second,
+		5 * time.Second,
+		10 * time.Second,
+	}
 
-    for i, d := range delays {
-        data, err := cli.Download(ctx, media)
-        if err == nil {
-            if i > 0 {
-                log.Warn().Int("attempt", i+1).Msg("Media download succeeded after retry")
-            }
-            return data, nil
-        }
+	for i, d := range delays {
+		data, err := cli.Download(ctx, media)
+		if err == nil {
+			if i > 0 {
+				log.Warn().Int("attempt", i+1).Msg("Media download succeeded after retry")
+			}
+			return data, nil
+		}
 
-        lastErr = err
-        log.Warn().
-            Err(err).
-            Int("attempt", i+1).
-            Dur("retry_in", d).
-            Msg("Failed to download media, retrying")
+		lastErr = err
+		log.Warn().
+			Err(err).
+			Int("attempt", i+1).
+			Dur("retry_in", d).
+			Msg("Failed to download media, retrying")
 
-        time.Sleep(d)
-    }
+		time.Sleep(d)
+	}
 
-    return nil, lastErr
+	return nil, lastErr
 }
 
 func sendToGlobalWebHook(jsonData []byte, token string, userID string) {
@@ -907,7 +906,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 						Err(err).
 						Str("messageID", evt.Info.ID).
 						Msg("Media download failed after retries")
-						return
+					return
 				}
 
 				// Determine the file extension based on the MIME type
@@ -1080,15 +1079,15 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					docCopy := *document // cópia por valor da struct
 
 					// se DirectPath estiver vazio, tenta extrair do URL
-					if (docCopy.DirectPath == nil || docCopy.GetDirectPath() == "") && docCopy.GetUrl() != "" {
-						if u, perr := url.Parse(docCopy.GetUrl()); perr == nil && u.Path != "" {
+					if (docCopy.DirectPath == nil || docCopy.GetDirectPath() == "") && docCopy.GetURL() != "" {
+						if u, perr := url.Parse(docCopy.GetURL()); perr == nil && u.Path != "" {
 							dp := u.Path
-							docCopy.DirectPath = &dp // seta o ponteiro com uma string local
+							docCopy.DirectPath = &dp
 						}
 					}
 
 					// zera a URL pra não insistir no link mmg direto
-					docCopy.Url = nil
+					docCopy.URL = nil
 
 					data, err = mycli.WAClient.Download(ctx, &docCopy)
 				}
@@ -1096,13 +1095,12 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 				if err != nil {
 					log.Error().
 						Err(err).
-						Str("url", document.GetUrl()).
+						Str("url", document.GetURL()).
 						Str("directPath", document.GetDirectPath()).
 						Msg("Failed to download document (after fallback)")
 					return
 				}
 
-			
 				// Determine the file extension
 				extension := ""
 				exts, err := mime.ExtensionsByType(document.GetMimetype())
@@ -1113,7 +1111,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					if filename != nil {
 						extension = filepath.Ext(*filename)
 					} else {
-						extension = ".bin" // Default extension if no filename or MIME type is available
+						extension = ".bin"
 					}
 				}
 				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+extension)

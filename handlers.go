@@ -3317,7 +3317,6 @@ func (s *server) DownloadDocument() http.HandlerFunc {
 			FileSHA256:    t.FileSHA256,
 			FileLength:    &t.FileLength,
 		}}
-
 		doc := msg.GetDocumentMessage()
 		if doc != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -3330,14 +3329,14 @@ func (s *server) DownloadDocument() http.HandlerFunc {
 				doc2 := proto.Clone(doc).(*waE2E.DocumentMessage)
 
 				// se DirectPath estiver vazio, tenta extrair do URL
-				if (doc2.DirectPath == nil || doc2.GetDirectPath() == "") && doc2.GetUrl() != "" {
-					if u, perr := url.Parse(doc2.GetUrl()); perr == nil && u.Path != "" {
+				if (doc2.DirectPath == nil || doc2.GetDirectPath() == "") && doc2.GetURL() != "" {
+					if u, perr := url.Parse(doc2.GetURL()); perr == nil && u.Path != "" {
 						doc2.DirectPath = proto.String(u.Path)
 					}
 				}
 
 				// zera URL pra não insistir no mmg link direto
-				doc2.Url = nil
+				doc2.URL = nil
 
 				docdata, err = clientManager.GetWhatsmeowClient(txtid).Download(ctx, doc2)
 			}
@@ -3345,17 +3344,17 @@ func (s *server) DownloadDocument() http.HandlerFunc {
 			if err != nil {
 				log.Error().
 					Err(err).
-					Str("url", doc.GetUrl()).
+					Str("url", doc.GetURL()).
 					Str("directPath", doc.GetDirectPath()).
 					Msg("failed to download document (after fallback)")
 				s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("failed to download document %v", err)))
 				return
 			}
+
 			mimetype = doc.GetMimetype()
 			if mimetype == "" {
 				mimetype = t.Mimetype
 			}
-
 		}
 
 		dataURL := dataurl.New(docdata, mimetype)

@@ -422,7 +422,27 @@ func callHookWithHmac(myurl string, payload map[string]string, userID string, en
 	}
 
 	if lastError != nil {
-		log.Error().Str("url", myurl).Msg("Webhook permanently failed after all retries")
+		log.Error().Str("url", myurl).Msg("Webhook permanently failed after all retries. Sending to error queue...")
+
+		errorPayloadMap := make(map[string]interface{})
+		if p, ok := body.(map[string]string); ok {
+			for k, v := range p {
+				errorPayloadMap[k] = v
+			}
+		} else if p, ok := body.(map[string]interface{}); ok {
+			errorPayloadMap = p
+		}
+
+		errorPayload := WebhookErrorPayload{
+			URL:              myurl,
+			Payload:          errorPayloadMap,
+			UserID:           userID,
+			EncryptedHmacKey: hex.EncodeToString(encryptedHmacKey),
+			AttemptTime:      time.Now(),
+			ErrorMessage:     lastError.Error(),
+		}
+
+		PublishDataErrorToQueue(errorPayload)
 	}
 }
 

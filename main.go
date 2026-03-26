@@ -51,6 +51,7 @@ var (
 	logType             = flag.String("logtype", "console", "Type of log output (console or json)")
 	skipMedia           = flag.Bool("skipmedia", false, "Do not attempt to download media in messages")
 	osName              = flag.String("osname", "Mac OS 10", "Connection OSName in Whatsapp")
+	platformType        = flag.String("platformtype", "DESKTOP", "Device platform type (DESKTOP, IPAD, ANDROID_TABLET, IOS_PHONE, ANDROID_PHONE, etc.)")
 	colorOutput         = flag.Bool("color", false, "Enable colored output for console logs")
 	sslcert             = flag.String("sslcertificate", "", "SSL Certificate File")
 	sslprivkey          = flag.String("sslprivatekey", "", "SSL Certificate Private Key File")
@@ -68,6 +69,7 @@ var (
 	webhookRetryCount        = flag.Int("retrycount", 5, "Number of times to retry failed webhooks")
 	webhookRetryDelaySeconds = flag.Int("retrydelay", 30, "Delay in seconds between webhook retries")
 	webhookErrorQueueName    = flag.String("errorqueue", "webhook_errors", "RabbitMQ queue name for failed webhooks")
+	publishSentMessages      = flag.Bool("publishsent", true, "Publish sent messages to global RabbitMQ events")
 
 	container        *sqlstore.Container
 	clientManager    = NewClientManager()
@@ -212,17 +214,24 @@ func main() {
 	if v := os.Getenv("WEBHOOK_ERROR_QUEUE_NAME"); v != "" {
 		*webhookErrorQueueName = v
 	}
+	if v := os.Getenv("WUZAPI_PUBLISH_SENT_MESSAGES"); v != "" {
+		*publishSentMessages = strings.ToLower(v) == "true" || v == "1"
+	}
 
 	log.Info().
 		Bool("enabled", *webhookRetryEnabled).
 		Int("count", *webhookRetryCount).
 		Int("delay", *webhookRetryDelaySeconds).
+		Bool("publish_sent", *publishSentMessages).
 		Str("queue", *webhookErrorQueueName).
 		Msg("Webhook Retry Configured")
 
 	// Novo bloco para sobrescrever o osName pelo ENV, se existir
 	if v := os.Getenv("SESSION_DEVICE_NAME"); v != "" {
 		*osName = v
+	}
+	if v := os.Getenv("SESSION_PLATFORM_TYPE"); v != "" {
+		*platformType = v
 	}
 
 	if *versionFlag {

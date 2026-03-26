@@ -28,6 +28,20 @@ type MediaDeliveryOptions struct {
 	S3Enabled     bool
 }
 
+type IncomingMediaOptions struct {
+	UserID        string
+	ContactJID    string
+	MessageID     string
+	MimeType      string
+	FallbackName  string
+	DefaultExt    string
+	IsIncoming    bool
+	MediaDelivery string
+	S3Enabled     bool
+	LogLabel      string
+	ExtraPostmap  map[string]interface{}
+}
+
 func NewMediaService() *MediaService {
 	return &MediaService{}
 }
@@ -153,6 +167,39 @@ func (m *MediaService) CleanupTempFile(path string) {
 	if err := os.Remove(path); err != nil {
 		log.Error().Err(err).Str("path", path).Msg("Failed to delete temporary file")
 	}
+}
+
+func (m *MediaService) ProcessIncomingMedia(ctx context.Context, postmap map[string]interface{}, data []byte, opts IncomingMediaOptions) error {
+	tmpPath, err := m.WriteTempFile(opts.UserID, opts.MessageID, opts.MimeType, opts.FallbackName, opts.DefaultExt, data)
+	if err != nil {
+		return err
+	}
+	defer m.CleanupTempFile(tmpPath)
+
+	err = m.EnrichPostmapWithMedia(ctx, postmap, tmpPath, data, MediaDeliveryOptions{
+		UserID:        opts.UserID,
+		ContactJID:    opts.ContactJID,
+		MessageID:     opts.MessageID,
+		MimeType:      opts.MimeType,
+		FileName:      filepath.Base(tmpPath),
+		IsIncoming:    opts.IsIncoming,
+		MediaDelivery: opts.MediaDelivery,
+		S3Enabled:     opts.S3Enabled,
+	})
+	if err != nil {
+		return err
+	}
+
+	for k, v := range opts.ExtraPostmap {
+		postmap[k] = v
+	}
+
+	if opts.LogLabel != "" {
+		log.Info().Str("path", tmpPath).Msg(opts.LogLabel + " processed")
+		log.Info().Str("path", tmpPath).Msg("Temporary file deleted")
+	}
+
+	return nil
 }
 
 var mediaService = NewMediaService()

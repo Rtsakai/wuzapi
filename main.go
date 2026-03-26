@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.mau.fi/whatsmeow"
+	waStore "go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	waLog "go.mau.fi/whatsmeow/util/log"
 
@@ -70,6 +72,7 @@ var (
 	webhookRetryDelaySeconds = flag.Int("retrydelay", 30, "Delay in seconds between webhook retries")
 	webhookErrorQueueName    = flag.String("errorqueue", "webhook_errors", "RabbitMQ queue name for failed webhooks")
 	publishSentMessages      = flag.Bool("publishsent", true, "Publish sent messages to global RabbitMQ events")
+	autoWAVersion            = flag.Bool("autowaversion", true, "Fetch the latest WhatsApp Web version on startup")
 
 	container        *sqlstore.Container
 	clientManager    = NewClientManager()
@@ -217,12 +220,16 @@ func main() {
 	if v := os.Getenv("WUZAPI_PUBLISH_SENT_MESSAGES"); v != "" {
 		*publishSentMessages = strings.ToLower(v) == "true" || v == "1"
 	}
+	if v := os.Getenv("WUZAPI_AUTO_WA_VERSION"); v != "" {
+		*autoWAVersion = strings.ToLower(v) == "true" || v == "1"
+	}
 
 	log.Info().
 		Bool("enabled", *webhookRetryEnabled).
 		Int("count", *webhookRetryCount).
 		Int("delay", *webhookRetryDelaySeconds).
 		Bool("publish_sent", *publishSentMessages).
+		Bool("auto_wa_version", *autoWAVersion).
 		Str("queue", *webhookErrorQueueName).
 		Msg("Webhook Retry Configured")
 
@@ -394,6 +401,21 @@ func main() {
 			log.Error().Err(err).Msg("Failed to close database connection during cleanup")
 		}
 		os.Exit(1)
+	}
+
+	if *autoWAVersion {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		latestVer, err := whatsmeow.GetLatestVersion(ctx, globalHTTPClient)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to fetch latest WhatsApp Web version; keeping library default")
+		} else {
+			waStore.SetWAVersion(*latestVer)
+			log.Info().
+				Str("wa_version", latestVer.String()).
+				Msg("Configured latest WhatsApp Web version from network")
+		}
 	}
 
 	var dbLog waLog.Logger

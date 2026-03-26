@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -776,25 +774,10 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		// IMPORTANTE: sobrescreve o evento do webhook
 		postmap["event"] = &fixed
 
-		var s3Config struct {
-			Enabled       string `db:"s3_enabled"`
-			MediaDelivery string `db:"media_delivery"`
-		}
+		s3Config := mycli.loadMediaConfig(txtid)
 
 		// (opcional, mas recomendado) cache com o JID já normalizado
 		lastMessageCache.Set(mycli.userID, &fixed.Info, cache.DefaultExpiration)
-		myuserinfo, found := userinfocache.Get(mycli.token)
-		if !found {
-			err := mycli.db.Get(&s3Config, "SELECT CASE WHEN s3_enabled = 1 THEN 'true' ELSE 'false' END AS s3_enabled, media_delivery FROM users WHERE id = $1", txtid)
-			if err != nil {
-				log.Error().Err(err).Msg("onMessage Failed to get S3 config from DB as it was not on cache")
-				s3Config.Enabled = "false"
-				s3Config.MediaDelivery = "base64"
-			}
-		} else {
-			s3Config.Enabled = myuserinfo.(Values).Get("S3Enabled")
-			s3Config.MediaDelivery = myuserinfo.(Values).Get("MediaDelivery")
-		}
 
 		postmap["type"] = "Message"
 		dowebhook = 1
@@ -827,23 +810,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					return
 				}
 
-				isIncoming := fixed.Info.IsFromMe == false
-				contactJID := fixed.Info.Sender.String()
-				if fixed.Info.IsGroup {
-					contactJID = fixed.Info.Chat.String()
-				}
-
-				err = mediaService.ProcessIncomingMedia(context.Background(), postmap, data, IncomingMediaOptions{
-					UserID:        txtid,
-					ContactJID:    contactJID,
-					MessageID:     fixed.Info.ID,
-					MimeType:      img.GetMimetype(),
-					DefaultExt:    ".jpg",
-					IsIncoming:    isIncoming,
-					MediaDelivery: s3Config.MediaDelivery,
-					S3Enabled:     s3Config.Enabled == "true",
-					LogLabel:      "Image",
-				})
+				err = mycli.processIncomingMedia(postmap, &fixed.Info, data, img.GetMimetype(), ".jpg", "Image", nil, s3Config)
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to process image media")
 					return
@@ -859,23 +826,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					return
 				}
 
-				isIncoming := evt.Info.IsFromMe == false
-				contactJID := evt.Info.Sender.String()
-				if evt.Info.IsGroup {
-					contactJID = evt.Info.Chat.String()
-				}
-
-				err = mediaService.ProcessIncomingMedia(context.Background(), postmap, data, IncomingMediaOptions{
-					UserID:        txtid,
-					ContactJID:    contactJID,
-					MessageID:     evt.Info.ID,
-					MimeType:      audio.GetMimetype(),
-					DefaultExt:    ".ogg",
-					IsIncoming:    isIncoming,
-					MediaDelivery: s3Config.MediaDelivery,
-					S3Enabled:     s3Config.Enabled == "true",
-					LogLabel:      "Audio",
-				})
+				err = mycli.processIncomingMedia(postmap, &evt.Info, data, audio.GetMimetype(), ".ogg", "Audio", nil, s3Config)
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to process audio media")
 					return
@@ -884,56 +835,15 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 			// try to get Document if any
 			document := evt.Message.GetDocumentMessage()
 			if document != nil {
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-				defer cancel()
-
-				data, err := mediaService.DownloadDocument(ctx, mycli.WAClient, document)
+				err := mycli.processIncomingDocument(postmap, &evt.Info, document, s3Config)
 				if err != nil {
 					log.Error().
 						Err(err).
 						Str("url", document.GetURL()).
 						Str("directPath", document.GetDirectPath()).
-						Msg("Failed to download document (after fallback)")
+						Msg("Failed to process document media")
 					return
 				}
-
-				fallbackName := ""
-				if document.FileName != nil {
-					fallbackName = document.GetFileName()
-				}
-				tmpPath, err := mediaService.WriteTempFile(txtid, evt.Info.ID, document.GetMimetype(), fallbackName, ".bin", data)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to save document to temporary file")
-					return
-				}
-
-				isIncoming := evt.Info.IsFromMe == false
-				contactJID := evt.Info.Sender.String()
-				if evt.Info.IsGroup {
-					contactJID = evt.Info.Chat.String()
-				}
-
-				err = mediaService.EnrichPostmapWithMedia(ctx, postmap, tmpPath, data, MediaDeliveryOptions{
-					UserID:        txtid,
-					ContactJID:    contactJID,
-					MessageID:     evt.Info.ID,
-					MimeType:      document.GetMimetype(),
-					FileName:      filepath.Base(tmpPath),
-					IsIncoming:    isIncoming,
-					MediaDelivery: s3Config.MediaDelivery,
-					S3Enabled:     s3Config.Enabled == "true",
-				})
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to enrich document delivery payload")
-					mediaService.CleanupTempFile(tmpPath)
-					return
-				}
-
-				// Log the successful conversion
-				log.Info().Str("path", tmpPath).Msg("Document processed")
-
-				mediaService.CleanupTempFile(tmpPath)
-				log.Info().Str("path", tmpPath).Msg("Temporary file deleted")
 			}
 
 			// try to get Video if any
@@ -945,23 +855,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 					return
 				}
 
-				isIncoming := evt.Info.IsFromMe == false
-				contactJID := evt.Info.Sender.String()
-				if evt.Info.IsGroup {
-					contactJID = evt.Info.Chat.String()
-				}
-
-				err = mediaService.ProcessIncomingMedia(context.Background(), postmap, data, IncomingMediaOptions{
-					UserID:        txtid,
-					ContactJID:    contactJID,
-					MessageID:     evt.Info.ID,
-					MimeType:      video.GetMimetype(),
-					DefaultExt:    ".mp4",
-					IsIncoming:    isIncoming,
-					MediaDelivery: s3Config.MediaDelivery,
-					S3Enabled:     s3Config.Enabled == "true",
-					LogLabel:      "Video",
-				})
+				err = mycli.processIncomingMedia(postmap, &evt.Info, data, video.GetMimetype(), ".mp4", "Video", nil, s3Config)
 				if err != nil {
 					log.Error().Err(err).Msg("Failed to process video media")
 					return
@@ -969,203 +863,16 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 			}
 			sticker := evt.Message.GetStickerMessage()
 			if sticker != nil {
-				ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-				defer cancel()
-
-				// DEBUG que mata a charada: url/directpath/auth
-				stURL := sticker.GetURL()
-				stDP := sticker.GetDirectPath()
-
-				log.Debug().
-					Str("sticker_url", stURL).
-					Str("sticker_direct_path", stDP).
-					Bool("directpath_has_auth", strings.Contains(stDP, "auth=")).
-					Int("media_key_len", len(sticker.GetMediaKey())).
-					Msg("Sticker download debug")
-
-				data, err := mediaService.DownloadSticker(ctx, mycli.WAClient, sticker)
+				err := mycli.processIncomingSticker(postmap, &evt.Info, sticker, s3Config)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to download sticker (after fallback)")
+					log.Error().Err(err).Msg("Failed to process sticker media")
 					return
 				}
-
-				tmpPath, err := mediaService.WriteTempFile(txtid, evt.Info.ID, sticker.GetMimetype(), "", ".webp", data)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to save sticker to temporary file")
-					return
-				}
-
-				isIncoming := evt.Info.IsFromMe == false
-				contactJID := evt.Info.Sender.String()
-				if evt.Info.IsGroup {
-					contactJID = evt.Info.Chat.String()
-				}
-
-				err = mediaService.EnrichPostmapWithMedia(ctx, postmap, tmpPath, data, MediaDeliveryOptions{
-					UserID:        txtid,
-					ContactJID:    contactJID,
-					MessageID:     evt.Info.ID,
-					MimeType:      sticker.GetMimetype(),
-					FileName:      filepath.Base(tmpPath),
-					IsIncoming:    isIncoming,
-					MediaDelivery: s3Config.MediaDelivery,
-					S3Enabled:     s3Config.Enabled == "true",
-				})
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to enrich sticker delivery payload")
-					mediaService.CleanupTempFile(tmpPath)
-					return
-				}
-
-				// useful metadata (optional, but handy)
-				postmap["isSticker"] = true
-				postmap["stickerAnimated"] = sticker.GetIsAnimated()
-
-				mediaService.CleanupTempFile(tmpPath)
 			}
 
 		}
 
-		// Save message to history regardless of skipMedia setting
-		// Get user's history setting from cache
-		var historyLimit int
-		userinfo, found := userinfocache.Get(mycli.token)
-		if found {
-			historyStr := userinfo.(Values).Get("History")
-			historyLimit, _ = strconv.Atoi(historyStr)
-		} else {
-			log.Warn().Str("userID", mycli.userID).Msg("User info not found in cache, skipping history")
-			historyLimit = 0
-		}
-
-		if historyLimit > 0 {
-			messageType := "text"
-			textContent := ""
-			mediaLink := ""
-			caption := ""
-			replyToMessageID := ""
-
-			// Check for delete messages first
-			if protocolMsg := evt.Message.GetProtocolMessage(); protocolMsg != nil && protocolMsg.GetType() == 0 {
-				messageType = "delete"
-				if protocolMsg.GetKey() != nil {
-					textContent = protocolMsg.GetKey().GetID() // Store the deleted message ID
-				}
-				log.Info().Str("deletedMessageID", textContent).Str("messageID", evt.Info.ID).Msg("Delete message detected")
-				// Check for reactions
-			} else if reaction := evt.Message.GetReactionMessage(); reaction != nil {
-				messageType = "reaction"
-				replyToMessageID = reaction.GetKey().GetID()
-				textContent = reaction.GetText() // This will be the emoji
-			} else if img := evt.Message.GetImageMessage(); img != nil {
-				messageType = "image"
-				caption = img.GetCaption()
-			} else if video := evt.Message.GetVideoMessage(); video != nil {
-				messageType = "video"
-				caption = video.GetCaption()
-			} else if audio := evt.Message.GetAudioMessage(); audio != nil {
-				messageType = "audio"
-			} else if doc := evt.Message.GetDocumentMessage(); doc != nil {
-				messageType = "document"
-				caption = doc.GetCaption()
-			} else if sticker := evt.Message.GetStickerMessage(); sticker != nil {
-				messageType = "sticker"
-			} else if contact := evt.Message.GetContactMessage(); contact != nil {
-				messageType = "contact"
-				textContent = contact.GetDisplayName()
-			} else if location := evt.Message.GetLocationMessage(); location != nil {
-				messageType = "location"
-				textContent = location.GetName()
-			}
-
-			// Extract text content for non-reaction and non-delete messages
-			if messageType != "reaction" && messageType != "delete" {
-				if conv := evt.Message.GetConversation(); conv != "" {
-					textContent = conv
-				} else if ext := evt.Message.GetExtendedTextMessage(); ext != nil {
-					textContent = ext.GetText()
-					// Check if this is a reply to another message
-					if contextInfo := ext.GetContextInfo(); contextInfo != nil && contextInfo.GetStanzaID() != "" {
-						replyToMessageID = contextInfo.GetStanzaID()
-					}
-				} else {
-					textContent = caption
-				}
-
-				// Set default text content for media messages without captions
-				if textContent == "" {
-					switch messageType {
-					case "image":
-						textContent = ":image:"
-					case "video":
-						textContent = ":video:"
-					case "audio":
-						textContent = ":audio:"
-					case "document":
-						textContent = ":document:"
-					case "sticker":
-						textContent = ":sticker:"
-					case "contact":
-						if textContent == "" {
-							textContent = ":contact:"
-						}
-					case "location":
-						if textContent == "" {
-							textContent = ":location:"
-						}
-					}
-				}
-			}
-
-			// Check for replies in regular conversation messages too
-			if messageType == "text" && replyToMessageID == "" {
-				// For regular text messages, check if there's context info indicating a reply
-				// This might be available in the message context
-				if conv := evt.Message.GetConversation(); conv != "" {
-					// Check if the message has reply context (this depends on WhatsApp message structure)
-					// For now, we'll rely on ExtendedTextMessage for reply detection
-				}
-			}
-
-			// Try to get media link from S3 data if available
-			if s3Data, ok := postmap["s3"].(map[string]interface{}); ok {
-				if url, ok := s3Data["url"].(string); ok {
-					mediaLink = url
-				}
-			}
-
-			// Only save if there's meaningful content (including delete messages)
-			if textContent != "" || mediaLink != "" || (messageType != "text" && messageType != "reaction") || messageType == "delete" {
-				// Serializar evt para JSON
-				evtJSON, err := json.Marshal(evt)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to marshal event to JSON")
-					evtJSON = []byte("{}")
-				}
-
-				err = mycli.s.saveMessageToHistory(
-					mycli.userID,
-					evt.Info.Chat.String(),
-					evt.Info.Sender.String(),
-					evt.Info.ID,
-					messageType,
-					textContent,
-					mediaLink,
-					replyToMessageID,
-					string(evtJSON),
-				)
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to save message to history")
-				} else {
-					err = mycli.s.trimMessageHistory(mycli.userID, evt.Info.Chat.String(), historyLimit)
-					if err != nil {
-						log.Error().Err(err).Msg("Failed to trim message history")
-					}
-				}
-			} else {
-				log.Debug().Str("messageType", messageType).Str("messageID", evt.Info.ID).Msg("Skipping empty message from history")
-			}
-		}
+		mycli.saveIncomingEventHistory(evt, postmap)
 
 	case *events.Receipt:
 		postmap["type"] = "ReadReceipt"

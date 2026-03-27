@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"go.mau.fi/whatsmeow"
+	waStore "go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	waLog "go.mau.fi/whatsmeow/util/log"
 
@@ -51,6 +53,7 @@ var (
 	logType             = flag.String("logtype", "console", "Type of log output (console or json)")
 	skipMedia           = flag.Bool("skipmedia", false, "Do not attempt to download media in messages")
 	osName              = flag.String("osname", "Mac OS 10", "Connection OSName in Whatsapp")
+	platformType        = flag.String("platformtype", "DESKTOP", "Device platform type (DESKTOP, IPAD, ANDROID_TABLET, IOS_PHONE, ANDROID_PHONE, etc.)")
 	colorOutput         = flag.Bool("color", false, "Enable colored output for console logs")
 	sslcert             = flag.String("sslcertificate", "", "SSL Certificate File")
 	sslprivkey          = flag.String("sslprivatekey", "", "SSL Certificate Private Key File")
@@ -68,6 +71,9 @@ var (
 	webhookRetryCount        = flag.Int("retrycount", 5, "Number of times to retry failed webhooks")
 	webhookRetryDelaySeconds = flag.Int("retrydelay", 30, "Delay in seconds between webhook retries")
 	webhookErrorQueueName    = flag.String("errorqueue", "webhook_errors", "RabbitMQ queue name for failed webhooks")
+	publishSentMessages      = flag.Bool("publishsent", true, "Publish sent messages to global RabbitMQ events")
+	autoWAVersion            = flag.Bool("autowaversion", true, "Fetch the latest WhatsApp Web version on startup")
+	revokeSentMaxAgeMinutes  = flag.Int("revokesentmaxageminutes", 0, "Maximum local age in minutes for revoking tracked sent messages; <=0 relies on WhatsApp server policy")
 
 	container        *sqlstore.Container
 	clientManager    = NewClientManager()
@@ -212,17 +218,34 @@ func main() {
 	if v := os.Getenv("WEBHOOK_ERROR_QUEUE_NAME"); v != "" {
 		*webhookErrorQueueName = v
 	}
+	if v := os.Getenv("WUZAPI_PUBLISH_SENT_MESSAGES"); v != "" {
+		*publishSentMessages = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("WUZAPI_AUTO_WA_VERSION"); v != "" {
+		*autoWAVersion = strings.ToLower(v) == "true" || v == "1"
+	}
+	if v := os.Getenv("WUZAPI_REVOKE_SENT_MAX_AGE_MINUTES"); v != "" {
+		if minutes, err := strconv.Atoi(v); err == nil {
+			*revokeSentMaxAgeMinutes = minutes
+		}
+	}
 
 	log.Info().
 		Bool("enabled", *webhookRetryEnabled).
 		Int("count", *webhookRetryCount).
 		Int("delay", *webhookRetryDelaySeconds).
+		Bool("publish_sent", *publishSentMessages).
+		Bool("auto_wa_version", *autoWAVersion).
+		Int("revoke_sent_max_age_minutes", *revokeSentMaxAgeMinutes).
 		Str("queue", *webhookErrorQueueName).
 		Msg("Webhook Retry Configured")
 
 	// Novo bloco para sobrescrever o osName pelo ENV, se existir
 	if v := os.Getenv("SESSION_DEVICE_NAME"); v != "" {
 		*osName = v
+	}
+	if v := os.Getenv("SESSION_PLATFORM_TYPE"); v != "" {
+		*platformType = v
 	}
 
 	if *versionFlag {
@@ -385,6 +408,21 @@ func main() {
 			log.Error().Err(err).Msg("Failed to close database connection during cleanup")
 		}
 		os.Exit(1)
+	}
+
+	if *autoWAVersion {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		latestVer, err := whatsmeow.GetLatestVersion(ctx, globalHTTPClient)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to fetch latest WhatsApp Web version; keeping library default")
+		} else {
+			waStore.SetWAVersion(*latestVer)
+			log.Info().
+				Str("wa_version", latestVer.String()).
+				Msg("Configured latest WhatsApp Web version from network")
+		}
 	}
 
 	var dbLog waLog.Logger

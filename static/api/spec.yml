@@ -886,7 +886,7 @@ paths:
       tags:
         - Chat 
       summary: Deletes a message sent by user
-      description: Deletes a messages sent by the same user
+      description: Deletes a message previously sent by the same user or agent. When message history is available, the API validates ownership before asking WhatsApp to revoke it. WhatsApp server policy still decides whether the revoke is accepted.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -902,7 +902,7 @@ paths:
           content:
             application/json:
               schema:
-                example: { "code": 200, "data": { "Details": "Message deleted" }, "success": true }
+                example: { "code": 200, "data": { "Details": "Deleted", "Timestamp": 1774531200, "Id": "1234-abcd-21234", "Validation": "validated_sent_history" }, "success": true }
   /chat/markread:
     post:
       tags:
@@ -930,7 +930,7 @@ paths:
       tags:
         - Chat 
       summary: Reacts to a message
-      description: Sends a reaction to some message. Phone, Body and Id are mandatory. If reaction is for your own message, prefix Phone with 'me:'. Body should be the reaction emoji.
+      description: Sends a reaction to some message. Phone, Body and Id are mandatory. If the reaction targets your own message, prefix Id with 'me:'. Use Body 'remove' to clear an existing reaction.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -946,7 +946,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"3EB06F9067F80BAB89FF","Timestamp":"2022-05-10T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/text:
     post:
       tags:
@@ -968,7 +968,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/edit:
     post:
       tags:
@@ -990,7 +990,7 @@ paths:
                   example: "90B2F8B13FAC8A9CF6B06E99C7834DC5"
                 Phone:
                   type: string
-                  description: The WhatsApp number or JID (use 'me:' prefix if your own message)
+                  description: The WhatsApp number or JID of the chat where the message was previously sent
                   example: "5491122223333"
                 Body:
                   type: string
@@ -1006,20 +1006,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  code:
-                    type: integer
-                    example: 200
-                  data:
-                    type: object
-                    properties:
-                      Details:
-                        type: string
-                        example: Message updated
-                  success:
-                    type: boolean
-                    example: true
+                $ref: '#/definitions/SentMessageResponse'
         400:
           description: Invalid parameters or message not found
           content:
@@ -1176,7 +1163,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/audio:
     post:
       tags:
@@ -1198,7 +1185,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/document:
     post:
       tags:
@@ -1220,29 +1207,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
-  /chat/send/template:
-    post:
-      tags:
-        - Chat 
-      summary: Sends a template message 
-      description: Sends a template message, that can contain quick reply buttons, url buttons and call buttons
-      security:
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/definitions/MessageTemplate'
-
-      responses:
-        200:
-          description: Response
-          content:
-            application/json:
-              schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/video:
     post:
       tags:
@@ -1264,7 +1229,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/sticker:
     post:
       tags:
@@ -1286,7 +1251,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/location:
     post:
       tags:
@@ -1308,7 +1273,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/contact:
     post:
       tags:
@@ -1330,13 +1295,13 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/buttons:
     post:
       tags:
         - Chat
       summary: Sends a Buttons message
-      description: Sends a Buttons message
+      description: Sends a legacy Buttons message. Availability depends on WhatsApp client support and this endpoint should be treated as compatibility-oriented rather than feature-complete.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -1351,7 +1316,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/list:
     post:
       tags:
@@ -1372,7 +1337,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/send/poll:
     post:
       tags:
@@ -1393,7 +1358,7 @@ paths:
           content:
             application/json:
               schema:
-                example: {"code":200,"data":{"Details":"Sent","Id":"90B2F8B13FAC8A9CF6B06E99C7834DC5","Timestamp":"2022-04-20T12:49:08-03:00"},"success":true}
+                $ref: '#/definitions/SentMessageResponse'
   /chat/downloadimage:
     post:
       tags:
@@ -1987,6 +1952,40 @@ paths:
                 example: { "code": 200, "data": { "Details": "Participants updated successfully" }, "success": true }
 
 definitions:
+  SentMessageData:
+    type: object
+    properties:
+      Details:
+        type: string
+        description: Human-readable status for the send operation
+        example: "Sent"
+      Timestamp:
+        type: integer
+        description: Unix timestamp returned by WhatsApp for the sent action
+        example: 1774531200
+      Id:
+        type: string
+        description: WhatsApp message ID to store for future edits, reactions or deletion
+        example: "90B2F8B13FAC8A9CF6B06E99C7834DC5"
+      Chat:
+        type: string
+        description: Normalized chat JID that received the message
+        example: "5511999999999@s.whatsapp.net"
+      MessageType:
+        type: string
+        description: Type classified by the API for the sent payload
+        example: "text"
+  SentMessageResponse:
+    type: object
+    properties:
+      code:
+        type: integer
+        example: 200
+      data:
+        $ref: '#/definitions/SentMessageData'
+      success:
+        type: boolean
+        example: true
   ContextInfo:
     type: object
     description: "Optional context info for replies"

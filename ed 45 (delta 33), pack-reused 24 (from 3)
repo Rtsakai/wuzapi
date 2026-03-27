@@ -1,0 +1,3323 @@
+[1mdiff --git a/.github/workflows/build.yml b/.github/workflows/build.yml[m
+[1mindex 24c3928..fb218ff 100644[m
+[1m--- a/.github/workflows/build.yml[m
+[1m+++ b/.github/workflows/build.yml[m
+[36m@@ -19,7 +19,7 @@[m [mjobs:[m
+     - name: Set up Go[m
+       uses: actions/setup-go@v5[m
+       with:[m
+[31m-        go-version: '1.25.0'[m
+[32m+[m[32m        go-version: '1.24.0'[m
+         cache: true[m
+ [m
+     - name: Download dependencies[m
+[1mdiff --git a/.github/workflows/docker-publish.yml b/.github/workflows/docker-publish.yml[m
+[1mindex 9990bc1..35df6c6 100644[m
+[1m--- a/.github/workflows/docker-publish.yml[m
+[1m+++ b/.github/workflows/docker-publish.yml[m
+[36m@@ -8,33 +8,32 @@[m [mon:[m
+     branches:[m
+       - main[m
+     types: [closed][m
+[31m-  workflow_dispatch:[m
+ [m
+ jobs:[m
+   build-and-push:[m
+     runs-on: ubuntu-latest[m
+     environment: DOCKER[m
+     if: github.event_name != 'pull_request' || github.event.pull_request.merged == true[m
+[31m-[m
+[32m+[m[41m    [m
+     steps:[m
+       - name: Check out the repo[m
+         uses: actions/checkout@v4[m
+[31m-[m
+[32m+[m[41m        [m
+       - name: Set up QEMU[m
+         uses: docker/setup-qemu-action@v3[m
+[31m-[m
+[32m+[m[41m        [m
+       - name: Set up Docker Buildx[m
+         uses: docker/setup-buildx-action@v3[m
+         with:[m
+           driver-opts: |[m
+             image=moby/buildkit:buildx-stable-1[m
+[31m-[m
+[32m+[m[41m      [m
+       - name: Login to Docker Hub[m
+         uses: docker/login-action@v3[m
+         with:[m
+           username: ${{ secrets.DOCKERHUB_USERNAME }}[m
+           password: ${{ secrets.DOCKERHUB_TOKEN }}[m
+[31m-[m
+[32m+[m[41m      [m
+       - name: Extract metadata (tags, labels) for Docker[m
+         id: meta[m
+         uses: docker/metadata-action@v5[m
+[36m@@ -43,7 +42,7 @@[m [mjobs:[m
+           tags: |[m
+             type=raw,value=latest[m
+             type=sha,format=short[m
+[31m-[m
+[32m+[m[41m      [m
+       - name: Build and push Docker image[m
+         uses: docker/build-push-action@v5[m
+         with:[m
+[36m@@ -53,4 +52,4 @@[m [mjobs:[m
+           tags: ${{ steps.meta.outputs.tags }}[m
+           labels: ${{ steps.meta.outputs.labels }}[m
+           cache-from: type=gha[m
+[31m-          cache-to: type=gha,mode=max[m
+[32m+[m[32m          cache-to: type=gha,mode=max[m[41m [m
+[1mdiff --git a/Dockerfile b/Dockerfile[m
+[1mindex 23c1ac5..5dc617e 100644[m
+[1m--- a/Dockerfile[m
+[1m+++ b/Dockerfile[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-FROM golang:1.25-bookworm AS builder[m
+[32m+[m[32mFROM golang:1.24-bullseye AS builder[m
+ [m
+ RUN apt-get update && apt-get install -y --no-install-recommends \[m
+     ca-certificates \[m
+[36m@@ -21,7 +21,7 @@[m [mCOPY . .[m
+ ENV CGO_ENABLED=1[m
+ RUN go build -o wuzapi[m
+ [m
+[31m-FROM debian:bookworm-slim[m
+[32m+[m[32mFROM debian:bullseye-slim[m
+ [m
+ RUN apt-get update && apt-get install -y --no-install-recommends \[m
+     ca-certificates \[m
+[1mdiff --git a/README.md b/README.md[m
+[1mindex d71214a..fcfb062 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -323,13 +323,6 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>Nicolas</b></sub>[m
+         </a>[m
+     </td>[m
+[31m-    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+[31m-        <a href=https://github.com/cleitonme>[m
+[31m-            <img src=https://avatars.githubusercontent.com/u/12551230?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=cleitonme/>[m
+[31m-            <br />[m
+[31m-            <sub style="font-size:14px"><b>cleitonme</b></sub>[m
+[31m-        </a>[m
+[31m-    </td>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/guilhermejansen>[m
+             <img src=https://avatars.githubusercontent.com/u/52773109?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Guilherme Jansen/>[m
+[36m@@ -344,6 +337,13 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>Luiz Felipe Neves</b></sub>[m
+         </a>[m
+     </td>[m
+[32m+[m[32m    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+[32m+[m[32m        <a href=https://github.com/cleitonme>[m
+[32m+[m[32m            <img src=https://avatars.githubusercontent.com/u/12551230?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=cleitonme/>[m
+[32m+[m[32m            <br />[m
+[32m+[m[32m            <sub style="font-size:14px"><b>cleitonme</b></sub>[m
+[32m+[m[32m        </a>[m
+[32m+[m[32m    </td>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/WellingtonFonseca>[m
+             <img src=https://avatars.githubusercontent.com/u/25608175?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Wellington Fonseca/>[m
+[36m@@ -367,13 +367,6 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>ramon-victor</b></sub>[m
+         </a>[m
+     </td>[m
+[31m-    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+[31m-        <a href=https://github.com/AntonKun>[m
+[31m-            <img src=https://avatars.githubusercontent.com/u/59668952?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Anton Kozyk/>[m
+[31m-            <br />[m
+[31m-            <sub style="font-size:14px"><b>Anton Kozyk</b></sub>[m
+[31m-        </a>[m
+[31m-    </td>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/netrixken>[m
+             <img src=https://avatars.githubusercontent.com/u/9066682?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Netrix Ken/>[m
+[36m@@ -402,8 +395,6 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>Vitor Silva Lima</b></sub>[m
+         </a>[m
+     </td>[m
+[31m-</tr>[m
+[31m-<tr>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/RuanAyram>[m
+             <img src=https://avatars.githubusercontent.com/u/16547662?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Ruan Kaylo/>[m
+[36m@@ -411,6 +402,8 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>Ruan Kaylo</b></sub>[m
+         </a>[m
+     </td>[m
+[32m+[m[32m</tr>[m
+[32m+[m[32m<tr>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/pedroafonso18>[m
+             <img src=https://avatars.githubusercontent.com/u/157052926?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Pedro Afonso/>[m
+[36m@@ -446,8 +439,6 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>João Victor Souza</b></sub>[m
+         </a>[m
+     </td>[m
+[31m-</tr>[m
+[31m-<tr>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/gusnips>[m
+             <img src=https://avatars.githubusercontent.com/u/981265?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Gustavo Salomé />[m
+[36m@@ -455,6 +446,15 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+             <sub style="font-size:14px"><b>Gustavo Salomé </b></sub>[m
+         </a>[m
+     </td>[m
+[32m+[m[32m</tr>[m
+[32m+[m[32m<tr>[m
+[32m+[m[32m    <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+[32m+[m[32m        <a href=https://github.com/AntonKun>[m
+[32m+[m[32m            <img src=https://avatars.githubusercontent.com/u/59668952?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Anton Kozyk/>[m
+[32m+[m[32m            <br />[m
+[32m+[m[32m            <sub style="font-size:14px"><b>Anton Kozyk</b></sub>[m
+[32m+[m[32m        </a>[m
+[32m+[m[32m    </td>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+         <a href=https://github.com/anilgulecha>[m
+             <img src=https://avatars.githubusercontent.com/u/1016984?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Anil Gulecha/>[m
+[36m@@ -500,7 +500,7 @@[m [mCheck the [API Reference](https://github.com/asternic/wuzapi/blob/main/API.md)[m
+         </a>[m
+     </td>[m
+     <td align="center" style="word-wrap: break-word; width: 150.0; height: 150.0">[m
+[31m-        <a href=https://github.com/jobasfernandes>[m
+[32m+[m[32m        <a href=https://github.com/JobasFernandes>[m
+             <img src=https://avatars.githubusercontent.com/u/26033148?v=4 width="100;"  style="border-radius:50%;align-items:center;justify-content:center;overflow:hidden;padding-top:10px" alt=Joseph Fernandes/>[m
+             <br />[m
+             <sub style="font-size:14px"><b>Joseph Fernandes</b></sub>[m
+[1mdiff --git a/avatar_cache.go b/avatar_cache.go[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7e6723d[m
+[1m--- /dev/null[m
+[1m+++ b/avatar_cache.go[m
+[36m@@ -0,0 +1,59 @@[m
+[32m+[m[32mpackage main[m
+[32m+[m
+[32m+[m[32mimport ([m
+[32m+[m	[32m"context"[m
+[32m+[m	[32m"strings"[m
+[32m+[m	[32m"time"[m
+[32m+[m
+[32m+[m	[32m"github.com/patrickmn/go-cache"[m
+[32m+[m	[32m"github.com/rs/zerolog/log"[m
+[32m+[m	[32m"golang.org/x/sync/singleflight"[m
+[32m+[m[32m)[m
+[32m+[m
+[32m+[m[32m// Cache de "avatar indisponível" (privacidade / sem foto)[m
+[32m+[m[32m// Evita insistir e evita spam de log[m
+[32m+[m[32mvar avatarDenyCache = cache.New(12*time.Hour, 30*time.Minute)[m
+[32m+[m
+[32m+[m[32m// Colapsa chamadas concorrentes para o mesmo user+jid[m
+[32m+[m[32mvar avatarSF singleflight.Group[m
+[32m+[m
+[32m+[m[32mfunc isHiddenAvatarErr(err error) bool {[m
+[32m+[m	[32mif err == nil {[m
+[32m+[m		[32mreturn false[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32ms := strings.ToLower(err.Error())[m
+[32m+[m
+[32m+[m	[32m// Privacidade / bloqueio[m
+[32m+[m	[32mif strings.Contains(s, "hidden their profile picture") ||[m
+[32m+[m		[32m(strings.Contains(s, "profile picture") && strings.Contains(s, "hidden")) ||[m
+[32m+[m		[32mstrings.Contains(s, "privacy") ||[m
+[32m+[m		[32mstrings.Contains(s, "not authorized") ||[m
+[32m+[m		[32mstrings.Contains(s, "forbidden") ||[m
+[32m+[m		[32mstrings.Contains(s, "403") {[m
+[32m+[m		[32mreturn true[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32m// Sem foto[m
+[32m+[m	[32mif strings.Contains(s, "does not have a profile picture") ||[m
+[32m+[m		[32mstrings.Contains(s, "no profile picture") ||[m
+[32m+[m		[32m(strings.Contains(s, "profile picture") && strings.Contains(s, "does not have")) ||[m
+[32m+[m		[32m(strings.Contains(s, "profile picture") && strings.Contains(s, "not have")) {[m
+[32m+[m		[32mreturn true[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn false[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Aplica cooldown quando sabemos que não há avatar[m
+[32m+[m[32mfunc avatarCooldown(denyKey string) {[m
+[32m+[m	[32mavatarDenyCache.SetDefault(denyKey, true)[m
+[32m+[m	[32mlog.Debug().[m
+[32m+[m		[32mStr("denyKey", denyKey).[m
+[32m+[m		[32mMsg("avatar not available; cooldown applied")[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m// Contexto padrão para requests de avatar[m
+[32m+[m[32mfunc avatarCtx() (context.Context, func()) {[m
+[32m+[m	[32mreturn context.WithTimeout(context.Background(), 12*time.Second)[m
+[32m+[m[32m}[m
+[1mdiff --git a/db.go b/db.go[m
+[1mindex 66e9b4f..b26fe4f 100644[m
+[1m--- a/db.go[m
+[1m+++ b/db.go[m
+[36m@@ -4,6 +4,7 @@[m [mimport ([m
+ 	"fmt"[m
+ 	"os"[m
+ 	"path/filepath"[m
+[32m+[m	[32m"strings"[m
+ 	"time"[m
+ [m
+ 	"github.com/jmoiron/sqlx"[m
+[36m@@ -121,60 +122,130 @@[m [mtype HistoryMessage struct {[m
+ }[m
+ [m
+ func (s *server) saveMessageToHistory(userID, chatJID, senderJID, messageID, messageType, textContent, mediaLink, quotedMessageID, dataJson string) error {[m
+[32m+[m	[32m// RESOLVE LID -> PHONE JID antes de salvar[m
+[32m+[m	[32mchatJID = resolveLIDToPhoneJIDNoCtx(s.db, chatJID)[m
+[32m+[m	[32msenderJID = resolveLIDToPhoneJIDNoCtx(s.db, senderJID)[m
+ 	query := `INSERT INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)[m
+[31m-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`[m
+[32m+[m[32m              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)[m
+[32m+[m[32m              ON CONFLICT (user_id, message_id) DO NOTHING`[m
+[32m+[m
+ 	if s.db.DriverName() == "sqlite" {[m
+[31m-		query = `INSERT INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)[m
+[32m+[m		[32mquery = `INSERT OR IGNORE INTO message_history (user_id, chat_jid, sender_jid, message_id, timestamp, message_type, text_content, media_link, quoted_message_id, datajson)[m
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`[m
+ 	}[m
+[32m+[m
+ 	_, err := s.db.Exec(query, userID, chatJID, senderJID, messageID, time.Now(), messageType, textContent, mediaLink, quotedMessageID, dataJson)[m
+ 	if err != nil {[m
+ 		return fmt.Errorf("failed to save message to history: %w", err)[m
+ 	}[m
+ 	return nil[m
+ }[m
+[32m+[m[32mfunc upsertContactName(db *sqlx.DB, userID, jidPhone, jidLid, pushName, businessName string) error {[m
+[32m+[m	[32mjidPhone = strings.TrimSpace(jidPhone)[m
+[32m+[m	[32mjidLid = strings.TrimSpace(jidLid)[m
+[32m+[m	[32mpushName = strings.TrimSpace(pushName)[m
+[32m+[m	[32mbusinessName = strings.TrimSpace(businessName)[m
+[32m+[m
+[32m+[m	[32mif jidPhone == "" {[m
+[32m+[m		[32mreturn fmt.Errorf("upsertContactName: jidPhone vazio")[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mnow := time.Now()[m
+[32m+[m
+[32m+[m	[32mif db.DriverName() == "sqlite" {[m
+[32m+[m		[32m_, err := db.Exec(`[m
+[32m+[m			[32mINSERT INTO wa_contacts (user_id, jid_phone, jid_lid, push_name, business_name, updated_at)[m
+[32m+[m			[32mVALUES (?, ?, ?, ?, ?, ?)[m
+[32m+[m			[32mON CONFLICT(user_id, jid_phone) DO UPDATE SET[m
+[32m+[m				[32mjid_lid = COALESCE(excluded.jid_lid, wa_contacts.jid_lid),[m
+[32m+[m				[32mpush_name = COALESCE(NULLIF(excluded.push_name, ''), wa_contacts.push_name),[m
+[32m+[m				[32mbusiness_name = COALESCE(NULLIF(excluded.business_name, ''), wa_contacts.business_name),[m
+[32m+[m				[32mupdated_at = excluded.updated_at[m
+[32m+[m		[32m`, userID, jidPhone, nullIfEmpty(jidLid), nullIfEmpty(pushName), nullIfEmpty(businessName), now)[m
+[32m+[m		[32mif err != nil {[m
+[32m+[m			[32mreturn fmt.Errorf("failed to upsert wa_contact (sqlite): %w", err)[m
+[32m+[m		[32m}[m
+[32m+[m		[32mreturn nil[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32m_, err := db.Exec(`[m
+[32m+[m		[32mINSERT INTO wa_contacts (user_id, jid_phone, jid_lid, push_name, business_name, updated_at)[m
+[32m+[m		[32mVALUES ($1,$2,$3,$4,$5,$6)[m
+[32m+[m		[32mON CONFLICT (user_id, jid_phone) DO UPDATE SET[m
+[32m+[m			[32mjid_lid = COALESCE(EXCLUDED.jid_lid, wa_contacts.jid_lid),[m
+[32m+[m			[32mpush_name = COALESCE(NULLIF(EXCLUDED.push_name, ''), wa_contacts.push_name),[m
+[32m+[m			[32mbusiness_name = COALESCE(NULLIF(EXCLUDED.business_name, ''), wa_contacts.business_name),[m
+[32m+[m			[32mupdated_at = EXCLUDED.updated_at[m
+[32m+[m	[32m`, userID, jidPhone, nullIfEmpty(jidLid), nullIfEmpty(pushName), nullIfEmpty(businessName), now)[m
+[32m+[m	[32mif err != nil {[m
+[32m+[m		[32mreturn fmt.Errorf("failed to upsert wa_contact (postgres): %w", err)[m
+[32m+[m	[32m}[m
+[32m+[m	[32mreturn nil[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mfunc nullIfEmpty(s string) any {[m
+[32m+[m	[32ms = strings.TrimSpace(s)[m
+[32m+[m	[32mif s == "" {[m
+[32m+[m		[32mreturn nil[m
+[32m+[m	[32m}[m
+[32m+[m	[32mreturn s[m
+[32m+[m[32m}[m
+ [m
+ func (s *server) trimMessageHistory(userID, chatJID string, limit int) error {[m
+ 	var queryHistory, querySecrets string[m
+ [m
+ 	if s.db.DriverName() == "postgres" {[m
+ 		queryHistory = `[m
+[31m-            DELETE FROM message_history[m
+[31m-            WHERE id IN ([m
+[31m-                SELECT id FROM message_history[m
+[31m-                WHERE user_id = $1 AND chat_jid = $2[m
+[31m-                ORDER BY timestamp DESC[m
+[31m-                OFFSET $3[m
+[31m-            )`[m
+[32m+[m			[32mDELETE FROM message_history[m
+[32m+[m			[32mWHERE id IN ([m
+[32m+[m				[32mSELECT id[m
+[32m+[m				[32mFROM message_history[m
+[32m+[m				[32mWHERE user_id = $1[m
+[32m+[m				[32m  AND chat_jid = $2[m
+[32m+[m				[32mORDER BY timestamp DESC[m
+[32m+[m				[32mOFFSET $3[m
+[32m+[m			[32m)[m
+[32m+[m		[32m`[m
+ [m
+[32m+[m		[32m// message_id é TEXT e message_history.id é INT -> precisa cast[m
+ 		querySecrets = `[m
+[31m-            DELETE FROM whatsmeow_message_secrets[m
+[31m-            WHERE message_id IN ([m
+[31m-                SELECT message_id FROM message_history[m
+[31m-                WHERE user_id = $1 AND chat_jid = $2[m
+[31m-                ORDER BY timestamp DESC[m
+[31m-                OFFSET $3[m
+[31m-            )`[m
+[32m+[m			[32mDELETE FROM whatsmeow_message_secrets[m
+[32m+[m			[32mWHERE message_id IN ([m
+[32m+[m				[32mSELECT id::text[m
+[32m+[m				[32mFROM message_history[m
+[32m+[m				[32mWHERE user_id = $1[m
+[32m+[m				[32m  AND chat_jid = $2[m
+[32m+[m				[32mORDER BY timestamp DESC[m
+[32m+[m				[32mOFFSET $3[m
+[32m+[m			[32m)[m
+[32m+[m		[32m`[m
+ 	} else { // sqlite[m
+ 		queryHistory = `[m
+[31m-            DELETE FROM message_history[m
+[31m-            WHERE id IN ([m
+[31m-                SELECT id FROM message_history[m
+[31m-                WHERE user_id = ? AND chat_jid = ?[m
+[31m-                ORDER BY timestamp DESC[m
+[31m-                LIMIT -1 OFFSET ?[m
+[31m-            )`[m
+[32m+[m			[32mDELETE FROM message_history[m
+[32m+[m			[32mWHERE id IN ([m
+[32m+[m				[32mSELECT id[m
+[32m+[m				[32mFROM message_history[m
+[32m+[m				[32mWHERE user_id = ?[m
+[32m+[m				[32m  AND chat_jid = ?[m
+[32m+[m				[32mORDER BY timestamp DESC[m
+[32m+[m				[32mLIMIT -1 OFFSET ?[m
+[32m+[m			[32m)[m
+[32m+[m		[32m`[m
+ [m
+ 		querySecrets = `[m
+[31m-            DELETE FROM whatsmeow_message_secrets[m
+[31m-            WHERE message_id IN ([m
+[31m-                SELECT message_id FROM message_history[m
+[31m-                WHERE user_id = ? AND chat_jid = ?[m
+[31m-                ORDER BY timestamp DESC[m
+[31m-                LIMIT -1 OFFSET ?[m
+[31m-            )`[m
+[32m+[m			[32mDELETE FROM whatsmeow_message_secrets[m
+[32m+[m			[32mWHERE message_id IN ([m
+[32m+[m				[32mSELECT CAST(id AS TEXT)[m
+[32m+[m				[32mFROM message_history[m
+[32m+[m				[32mWHERE user_id = ?[m
+[32m+[m				[32m  AND chat_jid = ?[m
+[32m+[m				[32mORDER BY timestamp DESC[m
+[32m+[m				[32mLIMIT -1 OFFSET ?[m
+[32m+[m			[32m)[m
+[32m+[m		[32m`[m
+ 	}[m
+ [m
+[32m+[m	[32m// apaga secrets primeiro[m
+ 	if _, err := s.db.Exec(querySecrets, userID, chatJID, limit); err != nil {[m
+ 		return fmt.Errorf("failed to trim message secrets: %w", err)[m
+ 	}[m
+[1mdiff --git a/go.mod b/go.mod[m
+[1mindex 4a74187..5e880ec 100644[m
+[1m--- a/go.mod[m
+[1m+++ b/go.mod[m
+[36m@@ -1,6 +1,8 @@[m
+ module wuzapi[m
+ [m
+[31m-go 1.25.0[m
+[32m+[m[32mgo 1.24.0[m
+[32m+[m
+[32m+[m[32mtoolchain go1.24.7[m
+ [m
+ require ([m
+ 	github.com/aws/aws-sdk-go-v2 v1.36.3[m
+[36m@@ -12,7 +14,7 @@[m [mrequire ([m
+ 	github.com/patrickmn/go-cache v2.1.0+incompatible[m
+ 	github.com/rs/zerolog v1.34.0[m
+ 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e[m
+[31m-	go.mau.fi/whatsmeow v0.0.0-20260305215846-fc65416c22c4[m
+[32m+[m	[32mgo.mau.fi/whatsmeow v0.0.0-20260123225751-89be06b020db[m
+ 	google.golang.org/protobuf v1.36.11[m
+ )[m
+ [m
+[36m@@ -47,26 +49,26 @@[m [mrequire ([m
+ 	github.com/petermattis/goid v0.0.0-20260113132338-7c7de50cc741 // indirect[m
+ 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect[m
+ 	github.com/rs/xid v1.6.0 // indirect[m
+[31m-	github.com/vektah/gqlparser/v2 v2.5.32 // indirect[m
+[31m-	golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a // indirect[m
+[31m-	golang.org/x/term v0.40.0 // indirect[m
+[31m-	golang.org/x/text v0.34.0 // indirect[m
+[32m+[m	[32mgithub.com/vektah/gqlparser/v2 v2.5.31 // indirect[m
+[32m+[m	[32mgolang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect[m
+[32m+[m	[32mgolang.org/x/term v0.39.0 // indirect[m
+[32m+[m	[32mgolang.org/x/text v0.33.0 // indirect[m
+ 	modernc.org/libc v1.65.8 // indirect[m
+ 	modernc.org/mathutil v1.7.1 // indirect[m
+ 	modernc.org/memory v1.11.0 // indirect[m
+ )[m
+ [m
+ require ([m
+[31m-	filippo.io/edwards25519 v1.2.0 // indirect[m
+[32m+[m	[32mfilippo.io/edwards25519 v1.1.0 // indirect[m
+ 	github.com/google/uuid v1.6.0 // indirect[m
+ 	github.com/jmoiron/sqlx v1.4.0[m
+ 	github.com/joho/godotenv v1.5.1[m
+ 	github.com/mattn/go-colorable v0.1.14 // indirect[m
+ 	github.com/mattn/go-isatty v0.0.20 // indirect[m
+ 	go.mau.fi/libsignal v0.2.1 // indirect[m
+[31m-	go.mau.fi/util v0.9.6 // indirect[m
+[31m-	golang.org/x/crypto v0.48.0 // indirect[m
+[31m-	golang.org/x/net v0.51.0[m
+[31m-	golang.org/x/sys v0.41.0 // indirect[m
+[32m+[m	[32mgo.mau.fi/util v0.9.5 // indirect[m
+[32m+[m	[32mgolang.org/x/crypto v0.47.0 // indirect[m
+[32m+[m	[32mgolang.org/x/net v0.49.0[m
+[32m+[m	[32mgolang.org/x/sys v0.40.0 // indirect[m
+ 	rsc.io/qr v0.2.0 // indirect[m
+ )[m
+[1mdiff --git a/go.sum b/go.sum[m
+[1mindex ab23bee..2409852 100644[m
+[1m--- a/go.sum[m
+[1m+++ b/go.sum[m
+[36m@@ -1,6 +1,5 @@[m
+[32m+[m[32mfilippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=[m
+ filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=[m
+[31m-filippo.io/edwards25519 v1.2.0 h1:crnVqOiS4jqYleHd9vaKZ+HKtHfllngJIiOpNpoJsjo=[m
+[31m-filippo.io/edwards25519 v1.2.0/go.mod h1:xzAOLCNug/yB62zG1bQ8uziwrIqIuxhctzJT18Q77mc=[m
+ github.com/DATA-DOG/go-sqlmock v1.5.2 h1:OcvFkGmslmlZibjAjaHm3L//6LiuBgolP7OputlJIzU=[m
+ github.com/DATA-DOG/go-sqlmock v1.5.2/go.mod h1:88MAG/4G7SMwSE3CeA0ZKzrT5CiOU3OJ+JlNzwDqpNU=[m
+ github.com/PuerkitoBio/goquery v1.10.3 h1:pFYcNSqHxBD06Fpj/KsbStFRsgRATgnf3LeXiUkhzPo=[m
+[36m@@ -76,8 +75,8 @@[m [mgithub.com/mattn/go-isatty v0.0.19/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D[m
+ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=[m
+ github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=[m
+ github.com/mattn/go-sqlite3 v1.14.22/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=[m
+[31m-github.com/mattn/go-sqlite3 v1.14.34 h1:3NtcvcUnFBPsuRcno8pUtupspG/GM+9nZ88zgJcp6Zk=[m
+[31m-github.com/mattn/go-sqlite3 v1.14.34/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=[m
+[32m+[m[32mgithub.com/mattn/go-sqlite3 v1.14.33 h1:A5blZ5ulQo2AtayQ9/limgHEkFreKj1Dv226a1K73s0=[m
+[32m+[m[32mgithub.com/mattn/go-sqlite3 v1.14.33/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=[m
+ github.com/mdp/qrterminal/v3 v3.2.1 h1:6+yQjiiOsSuXT5n9/m60E54vdgFsw0zhADHhHLrFet4=[m
+ github.com/mdp/qrterminal/v3 v3.2.1/go.mod h1:jOTmXvnBsMy5xqLniO0R++Jmjs2sTm9dFSuQ5kpz/SU=[m
+ github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=[m
+[36m@@ -105,17 +104,17 @@[m [mgithub.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e h1:MRM5ITcdelLK2j1[m
+ github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e/go.mod h1:XV66xRDqSt+GTGFMVlhk3ULuV0y9ZmzeVGR4mloJI3M=[m
+ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=[m
+ github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=[m
+[31m-github.com/vektah/gqlparser/v2 v2.5.32 h1:k9QPJd4sEDTL+qB4ncPLflqTJ3MmjB9SrVzJrawpFSc=[m
+[31m-github.com/vektah/gqlparser/v2 v2.5.32/go.mod h1:c1I28gSOVNzlfc4WuDlqU7voQnsqI6OG2amkBAFmgts=[m
+[32m+[m[32mgithub.com/vektah/gqlparser/v2 v2.5.31 h1:YhWGA1mfTjID7qJhd1+Vxhpk5HTgydrGU9IgkWBTJ7k=[m
+[32m+[m[32mgithub.com/vektah/gqlparser/v2 v2.5.31/go.mod h1:c1I28gSOVNzlfc4WuDlqU7voQnsqI6OG2amkBAFmgts=[m
+ github.com/vincent-petithory/dataurl v1.0.0 h1:cXw+kPto8NLuJtlMsI152irrVw9fRDX8AbShPRpg2CI=[m
+ github.com/vincent-petithory/dataurl v1.0.0/go.mod h1:FHafX5vmDzyP+1CQATJn7WFKc9CvnvxyvZy6I1MrG/U=[m
+ github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=[m
+ go.mau.fi/libsignal v0.2.1 h1:vRZG4EzTn70XY6Oh/pVKrQGuMHBkAWlGRC22/85m9L0=[m
+ go.mau.fi/libsignal v0.2.1/go.mod h1:iVvjrHyfQqWajOUaMEsIfo3IqgVMrhWcPiiEzk7NgoU=[m
+[31m-go.mau.fi/util v0.9.6 h1:2nsvxm49KhI3wrFltr0+wSUBlnQ4CMtykuELjpIU+ts=[m
+[31m-go.mau.fi/util v0.9.6/go.mod h1:sIJpRH7Iy5Ad1SBuxQoatxtIeErgzxCtjd/2hCMkYMI=[m
+[31m-go.mau.fi/whatsmeow v0.0.0-20260305215846-fc65416c22c4 h1:FGA3NtCVNeCJ+C+KBg1pODsrfxC/trM3RHFWIeY7y4c=[m
+[31m-go.mau.fi/whatsmeow v0.0.0-20260305215846-fc65416c22c4/go.mod h1:mXCRFyPEPn4jqWz6Afirn8vY7DpHCPnlKq6I2cWwFHM=[m
+[32m+[m[32mgo.mau.fi/util v0.9.5 h1:7AoWPCIZJGv4jvtFEuCe3GhAbI7uF9ckIooaXvwlIR4=[m
+[32m+[m[32mgo.mau.fi/util v0.9.5/go.mod h1:g1uvZ03VQhtTt2BgaRGVytS/Zj67NV0YNIECch0sQCQ=[m
+[32m+[m[32mgo.mau.fi/whatsmeow v0.0.0-20260123225751-89be06b020db h1:9BlsVQtKMgOStFf6VDwGk/7Bs9zv66H/TyiRDUdl3us=[m
+[32m+[m[32mgo.mau.fi/whatsmeow v0.0.0-20260123225751-89be06b020db/go.mod h1:jDLOQLLiYXcm4vMB6vtPcBLU387sRY+P3vOElxX8srA=[m
+ go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=[m
+ go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=[m
+ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=[m
+[36m@@ -124,10 +123,10 @@[m [mgolang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliY[m
+ golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=[m
+ golang.org/x/crypto v0.23.0/go.mod h1:CKFgDieR+mRhux2Lsu27y0fO304Db0wZe70UKqHu0v8=[m
+ golang.org/x/crypto v0.31.0/go.mod h1:kDsLvtWBEx7MV9tJOj9bnXsPbxwJQ6csT/x4KIN4Ssk=[m
+[31m-golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=[m
+[31m-golang.org/x/crypto v0.48.0/go.mod h1:r0kV5h3qnFPlQnBSrULhlsRfryS2pmewsg+XfMgkVos=[m
+[31m-golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a h1:ovFr6Z0MNmU7nH8VaX5xqw+05ST2uO1exVfZPVqRC5o=[m
+[31m-golang.org/x/exp v0.0.0-20260212183809-81e46e3db34a/go.mod h1:K79w1Vqn7PoiZn+TkNpx3BUWUQksGO3JcVX6qIjytmA=[m
+[32m+[m[32mgolang.org/x/crypto v0.47.0 h1:V6e3FRj+n4dbpw86FJ8Fv7XVOql7TEwpHapKoMJ/GO8=[m
+[32m+[m[32mgolang.org/x/crypto v0.47.0/go.mod h1:ff3Y9VzzKbwSSEzWqJsJVBnWmRwRSHt/6Op5n9bQc4A=[m
+[32m+[m[32mgolang.org/x/exp v0.0.0-20260112195511-716be5621a96 h1:Z/6YuSHTLOHfNFdb8zVZomZr7cqNgTJvA8+Qz75D8gU=[m
+[32m+[m[32mgolang.org/x/exp v0.0.0-20260112195511-716be5621a96/go.mod h1:nzimsREAkjBCIEFtHiYkrJyT+2uy9YZJB7H1k68CXZU=[m
+ golang.org/x/image v0.32.0 h1:6lZQWq75h7L5IWNk0r+SCpUJ6tUVd3v4ZHnbRKLkUDQ=[m
+ golang.org/x/image v0.32.0/go.mod h1:/R37rrQmKXtO6tYXAjtDLwQgFLHmhW+V6ayXlxzP2Pc=[m
+ golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=[m
+[36m@@ -135,8 +134,8 @@[m [mgolang.org/x/mod v0.8.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=[m
+ golang.org/x/mod v0.12.0/go.mod h1:iBbtSCu2XBx23ZKBPSOrRkjjQPZFPuis4dIYUhu/chs=[m
+ golang.org/x/mod v0.15.0/go.mod h1:hTbmBsO62+eylJbnUtE2MGJUyE7QWk4xUqPFrRgJ+7c=[m
+ golang.org/x/mod v0.17.0/go.mod h1:hTbmBsO62+eylJbnUtE2MGJUyE7QWk4xUqPFrRgJ+7c=[m
+[31m-golang.org/x/mod v0.33.0 h1:tHFzIWbBifEmbwtGz65eaWyGiGZatSrT9prnU8DbVL8=[m
+[31m-golang.org/x/mod v0.33.0/go.mod h1:swjeQEj+6r7fODbD2cqrnje9PnziFuw4bmLbBZFrQ5w=[m
+[32m+[m[32mgolang.org/x/mod v0.32.0 h1:9F4d3PHLljb6x//jOyokMv3eX+YDeepZSEo3mFJy93c=[m
+[32m+[m[32mgolang.org/x/mod v0.32.0/go.mod h1:SgipZ/3h2Ci89DlEtEXWUk/HteuRin+HHhN+WbNhguU=[m
+ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=[m
+ golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=[m
+ golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=[m
+[36m@@ -146,8 +145,8 @@[m [mgolang.org/x/net v0.15.0/go.mod h1:idbUs1IY1+zTqbi8yxTbhexhEEk5ur9LInksu6HrEpk=[m
+ golang.org/x/net v0.21.0/go.mod h1:bIjVDfnllIU7BJ2DNgfnXvpSvtn8VRwhlsaeUTyUS44=[m
+ golang.org/x/net v0.25.0/go.mod h1:JkAGAh7GEvH74S6FOH42FLoXpXbE/aqXSrIQjXgsiwM=[m
+ golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=[m
+[31m-golang.org/x/net v0.51.0 h1:94R/GTO7mt3/4wIKpcR5gkGmRLOuE/2hNGeWq/GBIFo=[m
+[31m-golang.org/x/net v0.51.0/go.mod h1:aamm+2QF5ogm02fjy5Bb7CQ0WMt1/WVM7FtyaTLlA9Y=[m
+[32m+[m[32mgolang.org/x/net v0.49.0 h1:eeHFmOGUTtaaPSGNmjBKpbng9MulQsJURQUAfUwY++o=[m
+[32m+[m[32mgolang.org/x/net v0.49.0/go.mod h1:/ysNB2EvaqvesRkuLAyjI1ycPZlQHM3q01F02UY/MV8=[m
+ golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=[m
+ golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=[m
+ golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=[m
+[36m@@ -170,8 +169,8 @@[m [mgolang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=[m
+ golang.org/x/sys v0.17.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=[m
+ golang.org/x/sys v0.20.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=[m
+ golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=[m
+[31m-golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=[m
+[31m-golang.org/x/sys v0.41.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=[m
+[32m+[m[32mgolang.org/x/sys v0.40.0 h1:DBZZqJ2Rkml6QMQsZywtnjnnGvHza6BTfYFWY9kjEWQ=[m
+[32m+[m[32mgolang.org/x/sys v0.40.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=[m
+ golang.org/x/telemetry v0.0.0-20240228155512-f48c80bd79b2/go.mod h1:TeRTkGYfJXctD9OcfyVLyj2J3IxLnKwHJR8f4D8a3YE=[m
+ golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=[m
+ golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=[m
+[36m@@ -181,8 +180,8 @@[m [mgolang.org/x/term v0.12.0/go.mod h1:owVbMEjm3cBLCHdkQu9b1opXd4ETQWc3BhuQGKgXgvU=[m
+ golang.org/x/term v0.17.0/go.mod h1:lLRBjIVuehSbZlaOtGMbcMncT+aqLLLmKrsjNrUguwk=[m
+ golang.org/x/term v0.20.0/go.mod h1:8UkIAJTvZgivsXaD6/pH6U9ecQzZ45awqEOzuCvwpFY=[m
+ golang.org/x/term v0.27.0/go.mod h1:iMsnZpn0cago0GOrHO2+Y7u7JPn5AylBrcoWkElMTSM=[m
+[31m-golang.org/x/term v0.40.0 h1:36e4zGLqU4yhjlmxEaagx2KuYbJq3EwY8K943ZsHcvg=[m
+[31m-golang.org/x/term v0.40.0/go.mod h1:w2P8uVp06p2iyKKuvXIm7N/y0UCRt3UfJTfZ7oOpglM=[m
+[32m+[m[32mgolang.org/x/term v0.39.0 h1:RclSuaJf32jOqZz74CkPA9qFuVTX7vhLlpfj/IGWlqY=[m
+[32m+[m[32mgolang.org/x/term v0.39.0/go.mod h1:yxzUCTP/U+FzoxfdKmLaA0RV1WgE0VY7hXBwKtY/4ww=[m
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=[m
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=[m
+ golang.org/x/text v0.3.7/go.mod h1:u+2+/6zg+i71rQMx5EYifcz6MCKuco9NR6JIITiCfzQ=[m
+[36m@@ -192,8 +191,8 @@[m [mgolang.org/x/text v0.13.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=[m
+ golang.org/x/text v0.14.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=[m
+ golang.org/x/text v0.15.0/go.mod h1:18ZOQIKpY8NJVqYksKHtTdi31H5itFRjB5/qKTNYzSU=[m
+ golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=[m
+[31m-golang.org/x/text v0.34.0 h1:oL/Qq0Kdaqxa1KbNeMKwQq0reLCCaFtqu2eNuSeNHbk=[m
+[31m-golang.org/x/text v0.34.0/go.mod h1:homfLqTYRFyVYemLBFl5GgL/DWEiH5wcsQ5gSh1yziA=[m
+[32m+[m[32mgolang.org/x/text v0.33.0 h1:B3njUFyqtHDUI5jMn1YIr5B0IE2U0qck04r6d4KPAxE=[m
+[32m+[m[32mgolang.org/x/text v0.33.0/go.mod h1:LuMebE6+rBincTi9+xWTY8TztLzKHc/9C1uBCG27+q8=[m
+ golang.org/x/time v0.6.0 h1:eTDhh4ZXt5Qf0augr54TN6suAUudPcawVZeIAPU7D4U=[m
+ golang.org/x/time v0.6.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=[m
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=[m
+[36m@@ -202,8 +201,8 @@[m [mgolang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc[m
+ golang.org/x/tools v0.6.0/go.mod h1:Xwgl3UAJ/d3gWutnCtw505GrjyAbvKui8lOU390QaIU=[m
+ golang.org/x/tools v0.13.0/go.mod h1:HvlwmtVNQAhOuCjW7xxvovg8wbNq7LwfXh/k7wXUl58=[m
+ golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d/go.mod h1:aiJjzUbINMkxbQROHiO6hDPo2LHcIPhhQsa9DLh0yGk=[m
+[31m-golang.org/x/tools v0.42.0 h1:uNgphsn75Tdz5Ji2q36v/nsFSfR/9BRFvqhGBaJGd5k=[m
+[31m-golang.org/x/tools v0.42.0/go.mod h1:Ma6lCIwGZvHK6XtgbswSoWroEkhugApmsXyrUmBhfr0=[m
+[32m+[m[32mgolang.org/x/tools v0.41.0 h1:a9b8iMweWG+S0OBnlU36rzLp20z1Rp10w+IY2czHTQc=[m
+[32m+[m[32mgolang.org/x/tools v0.41.0/go.mod h1:XSY6eDqxVNiYgezAVqqCeihT4j1U2CCsqvH3WhQpnlg=[m
+ golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=[m
+ google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=[m
+ google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=[m
+[1mdiff --git a/handlers.go b/handlers.go[m
+[1mindex a44d1b2..dd1e2f7 100644[m
+[1m--- a/handlers.go[m
+[1m+++ b/handlers.go[m
+[36m@@ -24,12 +24,11 @@[m [mimport ([m
+ 	"github.com/patrickmn/go-cache"[m
+ 	"github.com/rs/zerolog/log"[m
+ 	"github.com/vincent-petithory/dataurl"[m
+[31m-	"go.mau.fi/whatsmeow"[m
+ [m
+[32m+[m	[32m"go.mau.fi/whatsmeow"[m
+[32m+[m	[32m"go.mau.fi/whatsmeow/appstate"[m
+ 	"go.mau.fi/whatsmeow/proto/waCommon"[m
+ 	"go.mau.fi/whatsmeow/proto/waE2E"[m
+[31m-[m
+[31m-	"go.mau.fi/whatsmeow/appstate"[m
+ 	"go.mau.fi/whatsmeow/types"[m
+ 	"google.golang.org/protobuf/proto"[m
+ )[m
+[36m@@ -154,16 +153,15 @@[m [mfunc (s *server) authalice(next http.Handler) http.Handler {[m
+ 		if !found {[m
+ 			log.Info().Msg("Looking for user information in DB")[m
+ 			// Checks DB from matching user and store user values in context[m
+[31m-			rows, err := s.db.Query("SELECT id,name,webhook,jid,events,proxy_url,qrcode,history,hmac_key IS NOT NULL AND length(hmac_key) > 0,CASE WHEN s3_enabled THEN 'true' ELSE 'false' END,COALESCE(media_delivery, 'base64') FROM users WHERE token=$1 LIMIT 1", token)[m
+[32m+[m			[32mrows, err := s.db.Query("SELECT id,name,webhook,jid,events,proxy_url,qrcode,history,hmac_key IS NOT NULL AND length(hmac_key) > 0 FROM users WHERE token=$1 LIMIT 1", token)[m
+ 			if err != nil {[m
+ 				s.Respond(w, r, http.StatusInternalServerError, err)[m
+ 				return[m
+ 			}[m
+ 			defer rows.Close()[m
+ 			var history sql.NullInt64[m
+[31m-			var s3Enabled, mediaDelivery string[m
+ 			for rows.Next() {[m
+[31m-				err = rows.Scan(&txtid, &name, &webhook, &jid, &events, &proxy_url, &qrcode, &history, &hasHmac, &s3Enabled, &mediaDelivery)[m
+[32m+[m				[32merr = rows.Scan(&txtid, &name, &webhook, &jid, &events, &proxy_url, &qrcode, &history, &hasHmac)[m
+ 				if err != nil {[m
+ 					s.Respond(w, r, http.StatusInternalServerError, err)[m
+ 					return[m
+[36m@@ -177,18 +175,16 @@[m [mfunc (s *server) authalice(next http.Handler) http.Handler {[m
+ 				log.Debug().Str("userId", txtid).Bool("historyValid", history.Valid).Int64("historyValue", history.Int64).Str("historyStr", historyStr).Msg("User authentication - history debug")[m
+ [m
+ 				v := Values{map[string]string{[m
+[31m-					"Id":             txtid,[m
+[31m-					"Name":           name,[m
+[31m-					"Jid":            jid,[m
+[31m-					"Webhook":        webhook,[m
+[31m-					"Token":          token,[m
+[31m-					"Proxy":          proxy_url,[m
+[31m-					"Events":         events,[m
+[31m-					"Qrcode":         qrcode,[m
+[31m-					"History":        historyStr,[m
+[31m-					"HasHmac":        strconv.FormatBool(hasHmac),[m
+[31m-					"S3Enabled":      s3Enabled,[m
+[31m-					"MediaDelivery":  mediaDelivery,[m
+[32m+[m					[32m"Id":      txtid,[m
+[32m+[m					[32m"Name":    name,[m
+[32m+[m					[32m"Jid":     jid,[m
+[32m+[m					[32m"Webhook": webhook,[m
+[32m+[m					[32m"Token":   token,[m
+[32m+[m					[32m"Proxy":   proxy_url,[m
+[32m+[m					[32m"Events":  events,[m
+[32m+[m					[32m"Qrcode":  qrcode,[m
+[32m+[m					[32m"History": historyStr,[m
+[32m+[m					[32m"HasHmac": strconv.FormatBool(hasHmac),[m
+ 				}}[m
+ [m
+ 				userinfocache.Set(token, v, cache.NoExpiration)[m
+[36m@@ -813,13 +809,13 @@[m [mfunc (s *server) GetStatus() http.HandlerFunc {[m
+ func (s *server) SendDocument() http.HandlerFunc {[m
+ [m
+ 	type documentStruct struct {[m
+[31m-		Caption     string[m
+[31m-		Phone       string[m
+[31m-		Document    string[m
+[31m-		FileName    string[m
+[31m-		Id          string[m
+[31m-		MimeType    string[m
+[31m-		ContextInfo waE2E.ContextInfo[m
+[32m+[m		[32mCaption       string[m
+[32m+[m		[32mPhone         string[m
+[32m+[m		[32mDocument      string[m
+[32m+[m		[32mFileName      string[m
+[32m+[m		[32mId            string[m
+[32m+[m		[32mMimeType      string[m
+[32m+[m		[32mContextInfo   waE2E.ContextInfo[m
+ 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`[m
+ 	}[m
+ [m
+[36m@@ -952,11 +948,6 @@[m [mfunc (s *server) SendDocument() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "document", t.Caption, "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -973,15 +964,15 @@[m [mfunc (s *server) SendDocument() http.HandlerFunc {[m
+ func (s *server) SendAudio() http.HandlerFunc {[m
+ [m
+ 	type audioStruct struct {[m
+[31m-		Phone       string[m
+[31m-		Audio       string[m
+[31m-		Caption     string[m
+[31m-		Id          string[m
+[31m-		PTT         *bool  `json:"ptt,omitempty"`[m
+[31m-		MimeType    string `json:"mimetype,omitempty"`[m
+[31m-		Seconds     uint32[m
+[31m-		Waveform    []byte[m
+[31m-		ContextInfo waE2E.ContextInfo[m
+[32m+[m		[32mPhone         string[m
+[32m+[m		[32mAudio         string[m
+[32m+[m		[32mCaption       string[m
+[32m+[m		[32mId            string[m
+[32m+[m		[32mPTT           *bool  `json:"ptt,omitempty"`[m
+[32m+[m		[32mMimeType      string `json:"mimetype,omitempty"`[m
+[32m+[m		[32mSeconds       uint32[m
+[32m+[m		[32mWaveform      []byte[m
+[32m+[m		[32mContextInfo   waE2E.ContextInfo[m
+ 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`[m
+ 	}[m
+ [m
+[36m@@ -1123,11 +1114,6 @@[m [mfunc (s *server) SendAudio() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "audio", "", "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1326,11 +1312,6 @@[m [mfunc (s *server) SendImage() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "image", t.Caption, "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1480,11 +1461,6 @@[m [mfunc (s *server) SendSticker() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "sticker", "", "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1654,11 +1630,6 @@[m [mfunc (s *server) SendVideo() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "video", t.Caption, "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1675,11 +1646,11 @@[m [mfunc (s *server) SendVideo() http.HandlerFunc {[m
+ func (s *server) SendContact() http.HandlerFunc {[m
+ [m
+ 	type contactStruct struct {[m
+[31m-		Phone       string[m
+[31m-		Id          string[m
+[31m-		Name        string[m
+[31m-		Vcard       string[m
+[31m-		ContextInfo waE2E.ContextInfo[m
+[32m+[m		[32mPhone         string[m
+[32m+[m		[32mId            string[m
+[32m+[m		[32mName          string[m
+[32m+[m		[32mVcard         string[m
+[32m+[m		[32mContextInfo   waE2E.ContextInfo[m
+ 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`[m
+ 	}[m
+ [m
+[36m@@ -1776,11 +1747,6 @@[m [mfunc (s *server) SendContact() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "contact", t.Name, "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1797,12 +1763,12 @@[m [mfunc (s *server) SendContact() http.HandlerFunc {[m
+ func (s *server) SendLocation() http.HandlerFunc {[m
+ [m
+ 	type locationStruct struct {[m
+[31m-		Phone       string[m
+[31m-		Id          string[m
+[31m-		Name        string[m
+[31m-		Latitude    float64[m
+[31m-		Longitude   float64[m
+[31m-		ContextInfo waE2E.ContextInfo[m
+[32m+[m		[32mPhone         string[m
+[32m+[m		[32mId            string[m
+[32m+[m		[32mName          string[m
+[32m+[m		[32mLatitude      float64[m
+[32m+[m		[32mLongitude     float64[m
+[32m+[m		[32mContextInfo   waE2E.ContextInfo[m
+ 		QuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`[m
+ 	}[m
+ [m
+[36m@@ -1900,11 +1866,6 @@[m [mfunc (s *server) SendLocation() http.HandlerFunc {[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "location", t.Name, "", historyLimit)[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -1999,22 +1960,16 @@[m [mfunc (s *server) SendButtons() http.HandlerFunc {[m
+ 			Buttons:     buttons,[m
+ 		}[m
+ [m
+[31m-		msg := &waE2E.Message{ViewOnceMessage: &waE2E.FutureProofMessage{[m
+[32m+[m		[32mresp, err = clientManager.GetWhatsmeowClient(txtid).SendMessage(context.Background(), recipient, &waE2E.Message{ViewOnceMessage: &waE2E.FutureProofMessage{[m
+ 			Message: &waE2E.Message{[m
+ 				ButtonsMessage: msg2,[m
+ 			},[m
+[31m-		}}[m
+[31m-		resp, err = clientManager.GetWhatsmeowClient(txtid).SendMessage(context.Background(), recipient, msg, whatsmeow.SendRequestExtra{ID: msgid})[m
+[32m+[m		[32m}}, whatsmeow.SendRequestExtra{ID: msgid})[m
+ 		if err != nil {[m
+ 			s.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("error sending message: %v", err)))[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -2163,11 +2118,6 @@[m [mfunc (s *server) SendList() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message list sent")[m
+ 		response := map[string]interface{}{[m
+ 			"Details":   "Sent",[m
+[36m@@ -2244,8 +2194,8 @@[m [mfunc (s *server) SendMessage() http.HandlerFunc {[m
+ 		LinkPreview   bool[m
+ 		Id            string[m
+ 		ContextInfo   waE2E.ContextInfo[m
+[31m-		QuotedText    string          `json:"QuotedText,omitempty"`[m
+[31m-		QuotedMessage *waE2E.Message  `json:"QuotedMessage,omitempty"`[m
+[32m+[m		[32mQuotedText    string         `json:"QuotedText,omitempty"`[m
+[32m+[m		[32mQuotedMessage *waE2E.Message `json:"QuotedMessage,omitempty"`[m
+ 	}[m
+ 	return func(w http.ResponseWriter, r *http.Request) {[m
+ 		txtid := r.Context().Value("userinfo").(Values).Get("Id")[m
+[36m@@ -2346,12 +2296,6 @@[m [mfunc (s *server) SendMessage() http.HandlerFunc {[m
+ 		historyStr := r.Context().Value("userinfo").(Values).Get("History")[m
+ 		historyLimit, _ := strconv.Atoi(historyStr)[m
+ 		s.saveOutgoingMessageToHistory(txtid, recipient.String(), msgid, "text", t.Body, "", historyLimit)[m
+[31m-[m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -2425,11 +2369,6 @@[m [mfunc (s *server) SendPoll() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, pollMessage, resp.Timestamp, "poll")[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%v", resp.Timestamp)).Str("id", msgid).Msg("Poll sent")[m
+ [m
+ 		response := map[string]interface{}{"Details": "Poll sent successfully", "Id": msgid}[m
+[36m@@ -2860,11 +2799,6 @@[m [mfunc (s *server) SendTemplate() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		// Publish sent message event to RabbitMQ[m
+[31m-		token := r.Context().Value("userinfo").(Values).Get("Token")[m
+[31m-		userID := r.Context().Value("userinfo").(Values).Get("Id")[m
+[31m-		s.publishSentMessageEvent(token, userID, txtid, recipient, msgid, msg, resp.Timestamp)[m
+[31m-[m
+ 		log.Info().Str("timestamp", fmt.Sprintf("%d", resp.Timestamp.Unix())).Str("id", msgid).Msg("Message sent")[m
+ 		response := map[string]interface{}{"Details": "Sent", "Timestamp": resp.Timestamp.Unix(), "Id": msgid}[m
+ 		responseJson, err := json.Marshal(response)[m
+[36m@@ -3079,20 +3013,18 @@[m [mfunc (s *server) GetAvatar() http.HandlerFunc {[m
+ [m
+ 		txtid := r.Context().Value("userinfo").(Values).Get("Id")[m
+ [m
+[31m-		if clientManager.GetWhatsmeowClient(txtid) == nil {[m
+[32m+[m		[32mcli := clientManager.GetWhatsmeowClient(txtid)[m
+[32m+[m		[32mif cli == nil {[m
+ 			s.Respond(w, r, http.StatusInternalServerError, errors.New("no session"))[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		decoder := json.NewDecoder(r.Body)[m
+ 		var t getAvatarStruct[m
+[31m-		err := decoder.Decode(&t)[m
+[31m-		if err != nil {[m
+[32m+[m		[32mif err := json.NewDecoder(r.Body).Decode(&t); err != nil {[m
+ 			s.Respond(w, r, http.StatusBadRequest, errors.New("could not decode Payload"))[m
+ 			return[m
+ 		}[m
+[31m-[m
+[31m-		if len(t.Phone) < 1 {[m
+[32m+[m		[32mif strings.TrimSpace(t.Phone) == "" {[m
+ 			s.Respond(w, r, http.StatusBadRequest, errors.New("missing Phone in Payload"))[m
+ 			return[m
+ 		}[m
+[36m@@ -3103,34 +3035,64 @@[m [mfunc (s *server) GetAvatar() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		var pic *types.ProfilePictureInfo[m
+[32m+[m		[32mdenyKey := txtid + ":" + jid.String()[m
+[32m+[m		[32mif _, found := avatarDenyCache.Get(denyKey); found {[m
+[32m+[m			[32m// já sabemos que esse JID bloqueia foto OU não tem foto -> não insiste[m
+[32m+[m			[32ms.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))[m
+[32m+[m			[32mreturn[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32msfKey := "avatar:" + denyKey[m
+[32m+[m		[32mval, err, _ := avatarSF.Do(sfKey, func() (any, error) {[m
+[32m+[m			[32mctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)[m
+[32m+[m			[32mdefer cancel()[m
+[32m+[m
+[32m+[m			[32mpic, err := cli.GetProfilePictureInfo(ctx, jid, &whatsmeow.GetProfilePictureParams{[m
+[32m+[m				[32mPreview:    t.Preview,[m
+[32m+[m				[32mExistingID: "",[m
+[32m+[m			[32m})[m
+[32m+[m
+[32m+[m			[32mif err != nil {[m
+[32m+[m				[32m// privacidade/sem foto: arma cooldown e responde 404 (sem logar ERROR em loop)[m
+[32m+[m				[32mif isHiddenAvatarErr(err) {[m
+[32m+[m					[32mavatarDenyCache.SetDefault(denyKey, true)[m
+[32m+[m					[32mlog.Debug().Str("jid", jid.String()).Msg("avatar not available; cooling down")[m
+[32m+[m					[32mreturn nil, nil[m
+[32m+[m				[32m}[m
+[32m+[m				[32mreturn nil, err[m
+[32m+[m			[32m}[m
+ [m
+[31m-		existingID := ""[m
+[31m-		pic, err = clientManager.GetWhatsmeowClient(txtid).GetProfilePictureInfo(context.Background(), jid, &whatsmeow.GetProfilePictureParams{[m
+[31m-			Preview:    t.Preview,[m
+[31m-			ExistingID: existingID,[m
+[32m+[m			[32mreturn pic, nil[m
+ 		})[m
+[32m+[m
+ 		if err != nil {[m
+[32m+[m			[32m// BLINDAGEM: se for "sem foto/privacidade", vira 404 e cacheia (sem ERROR spam)[m
+[32m+[m			[32mif isHiddenAvatarErr(err) {[m
+[32m+[m				[32mavatarDenyCache.SetDefault(denyKey, true)[m
+[32m+[m				[32ms.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))[m
+[32m+[m				[32mreturn[m
+[32m+[m			[32m}[m
+[32m+[m
+ 			msg := fmt.Sprintf("failed to get avatar: %v", err)[m
+ 			log.Error().Msg(msg)[m
+ 			s.Respond(w, r, http.StatusInternalServerError, errors.New(msg))[m
+ 			return[m
+ 		}[m
+ [m
+[32m+[m		[32mpic, _ := val.(*types.ProfilePictureInfo)[m
+ 		if pic == nil {[m
+[31m-			s.Respond(w, r, http.StatusInternalServerError, errors.New("no avatar found"))[m
+[32m+[m			[32ms.Respond(w, r, http.StatusNotFound, errors.New("no avatar found"))[m
+ 			return[m
+ 		}[m
+ [m
+ 		log.Info().Str("id", pic.ID).Str("url", pic.URL).Msg("Got avatar")[m
+ [m
+[31m-		responseJson, err := json.Marshal(pic)[m
+[31m-		if err != nil {[m
+[31m-			s.Respond(w, r, http.StatusInternalServerError, err)[m
+[31m-		} else {[m
+[31m-			s.Respond(w, r, http.StatusOK, string(responseJson))[m
+[32m+[m		[32mb, jerr := json.Marshal(pic)[m
+[32m+[m		[32mif jerr != nil {[m
+[32m+[m			[32ms.Respond(w, r, http.StatusInternalServerError, jerr)[m
+[32m+[m			[32mreturn[m
+ 		}[m
+[31m-		return[m
+[32m+[m		[32ms.Respond(w, r, http.StatusOK, string(b))[m
+ 	}[m
+ }[m
+ [m
+[36m@@ -3355,18 +3317,44 @@[m [mfunc (s *server) DownloadDocument() http.HandlerFunc {[m
+ 			FileSHA256:    t.FileSHA256,[m
+ 			FileLength:    &t.FileLength,[m
+ 		}}[m
+[31m-[m
+ 		doc := msg.GetDocumentMessage()[m
+[31m-[m
+ 		if doc != nil {[m
+[31m-			docdata, err = clientManager.GetWhatsmeowClient(txtid).Download(context.Background(), doc)[m
+[32m+[m			[32mctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)[m
+[32m+[m			[32mdefer cancel()[m
+[32m+[m
+[32m+[m			[32mdocdata, err = clientManager.GetWhatsmeowClient(txtid).Download(ctx, doc)[m
+[32m+[m
+[32m+[m			[32mif err != nil && strings.Contains(err.Error(), "status code 403") {[m
+[32m+[m				[32m// fallback: força DirectPath e evita baixar via URL mmg[m
+[32m+[m				[32mdoc2 := proto.Clone(doc).(*waE2E.DocumentMessage)[m
+[32m+[m
+[32m+[m				[32m// se DirectPath estiver vazio, tenta extrair do URL[m
+[32m+[m				[32mif (doc2.DirectPath == nil || doc2.GetDirectPath() == "") && doc2.GetURL() != "" {[m
+[32m+[m					[32mif u, perr := url.Parse(doc2.GetURL()); perr == nil && u.Path != "" {[m
+[32m+[m						[32mdoc2.DirectPath = proto.String(u.Path)[m
+[32m+[m					[32m}[m
+[32m+[m				[32m}[m
+[32m+[m
+[32m+[m				[32m// zera URL pra não insistir no mmg link direto[m
+[32m+[m				[32mdoc2.URL = nil[m
+[32m+[m
+[32m+[m				[32mdocdata, err = clientManager.GetWhatsmeowClient(txtid).Download(ctx, doc2)[m
+[32m+[m			[32m}[m
+[32m+[m
+ 			if err != nil {[m
+[31m-				log.Error().Str("error", fmt.Sprintf("%v", err)).Msg("failed to download document")[m
+[31m-				msg := fmt.Sprintf("failed to download document %v", err)[m
+[31m-				s.Respond(w, r, http.StatusInternalServerError, errors.New(msg))[m
+[32m+[m				[32mlog.Error().[m
+[32m+[m					[32mErr(err).[m
+[32m+[m					[32mStr("url", doc.GetURL()).[m
+[32m+[m					[32mStr("directPath", doc.GetDirectPath()).[m
+[32m+[m					[32mMsg("failed to download document (after fallback)")[m
+[32m+[m				[32ms.Respond(w, r, http.StatusInternalServerError, errors.New(fmt.Sprintf("failed to download document %v", err)))[m
+ 				return[m
+ 			}[m
+[32m+[m
+ 			mimetype = doc.GetMimetype()[m
+[32m+[m			[32mif mimetype == "" {[m
+[32m+[m				[32mmimetype = t.Mimetype[m
+[32m+[m			[32m}[m
+ 		}[m
+ [m
+ 		dataURL := dataurl.New(docdata, mimetype)[m
+[36m@@ -5325,15 +5313,7 @@[m [mfunc (s *server) DeleteUserComplete() http.HandlerFunc {[m
+ 			client.Disconnect()[m
+ 		}[m
+ [m
+[31m-		// 2. Query S3 config before deleting the user[m
+[31m-		var s3Enabled bool[m
+[31m-		err = s.db.QueryRow("SELECT s3_enabled FROM users WHERE id = $1", id).Scan(&s3Enabled)[m
+[31m-		if err != nil {[m
+[31m-			log.Error().Err(err).Str("id", id).Msg("problem retrieving user s3 configuration")[m
+[31m-			// Continue anyway since we have the ID to delete local files[m
+[31m-		}[m
+[31m-[m
+[31m-		// 3. Remove from DB[m
+[32m+[m		[32m// 2. Remove from DB[m
+ 		_, err = s.db.Exec("DELETE FROM users WHERE id = $1", id)[m
+ 		if err != nil {[m
+ 			s.respondWithJSON(w, http.StatusInternalServerError, map[string]interface{}{[m
+[36m@@ -5345,13 +5325,13 @@[m [mfunc (s *server) DeleteUserComplete() http.HandlerFunc {[m
+ 			return[m
+ 		}[m
+ [m
+[31m-		// 4. Cleanup from memory[m
+[32m+[m		[32m// 3. Cleanup from memory[m
+ 		clientManager.DeleteWhatsmeowClient(id)[m
+ 		clientManager.DeleteMyClient(id)[m
+ 		clientManager.DeleteHTTPClient(id)[m
+ 		userinfocache.Delete(token)[m
+ [m
+[31m-		// 5. Remove media files[m
+[32m+[m		[32m// 4. Remove media files[m
+ 		userDirectory := filepath.Join(s.exPath, "files", id)[m
+ 		if stat, err := os.Stat(userDirectory); err == nil && stat.IsDir() {[m
+ 			log.Info().Str("dir", userDirectory).Msg("deleting media and history files from disk")[m
+[36m@@ -5361,8 +5341,10 @@[m [mfunc (s *server) DeleteUserComplete() http.HandlerFunc {[m
+ 			}[m
+ 		}[m
+ [m
+[31m-		// 6. Remove files from S3 (if enabled)[m
+[31m-		if s3Enabled {[m
+[32m+[m		[32m// 5. Remove files from S3 (if enabled)[m
+[32m+[m		[32mvar s3Enabled bool[m
+[32m+[m		[32merr = s.db.QueryRow("SELECT s3_enabled FROM users WHERE id = $1", id).Scan(&s3Enabled)[m
+[32m+[m		[32mif err == nil && s3Enabled {[m
+ 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)[m
+ 			defer cancel()[m
+ 			errS3 := GetS3Manager().DeleteAllUserObjects(ctx, id)[m
+[36m@@ -5928,10 +5910,12 @@[m [mfunc (s *server) GetHistory() http.HandlerFunc {[m
+ 			}[m
+ 		}[m
+ 		chatJID := r.URL.Query().Get("chat_jid")[m
+[32m+[m
+ 		if chatJID == "" {[m
+ 			s.Respond(w, r, http.StatusBadRequest, errors.New("chat_jid is required"))[m
+ 			return[m
+ 		}[m
+[32m+[m		[32mchatJID = resolveLIDToPhoneJIDNoCtx(s.db, chatJID)[m
+ [m
+ 		// If chat_jid is "index", return mapping of all instances to their chat_jids[m
+ 		if chatJID == "index" {[m
+[36m@@ -5955,7 +5939,6 @@[m [mfunc (s *server) GetHistory() http.HandlerFunc {[m
+ 				ChatJID         string `json:"chat_jid" db:"chat_jid"`[m
+ 				LastMessageTime string `json:"last_message_time" db:"last_message_time"`[m
+ 			}[m
+[31m-[m
+ 			var mappings []ChatMapping[m
+ 			err := s.db.Select(&mappings, query)[m
+ 			if err != nil {[m
+[36m@@ -5963,6 +5946,11 @@[m [mfunc (s *server) GetHistory() http.HandlerFunc {[m
+ 				return[m
+ 			}[m
+ [m
+[32m+[m			[32m// NORMALIZA chat_jid (@lid -> @s.whatsapp.net)[m
+[32m+[m			[32mfor i := range mappings {[m
+[32m+[m				[32mmappings[i].ChatJID = resolveLIDToPhoneJIDNoCtx(s.db, mappings[i].ChatJID)[m
+[32m+[m			[32m}[m
+[32m+[m
+ 			// Build the response map with chats ordered by most recent message[m
+ 			type ChatInfo struct {[m
+ 				ChatJID     string `json:"chat_jid"`[m
+[36m@@ -6629,165 +6617,3 @@[m [mfunc (s *server) DownloadSticker() http.HandlerFunc {[m
+ 		return[m
+ 	}[m
+ }[m
+[31m-[m
+[31m-// Helper function to determine message type from waE2E.Message[m
+[31m-func (s *server) getMessageType(msg *waE2E.Message) string {[m
+[31m-	if msg.GetConversation() != "" {[m
+[31m-		return "text"[m
+[31m-	}[m
+[31m-	if msg.GetExtendedTextMessage() != nil {[m
+[31m-		return "text"[m
+[31m-	}[m
+[31m-	if msg.GetImageMessage() != nil {[m
+[31m-		return "image"[m
+[31m-	}[m
+[31m-	if msg.GetVideoMessage() != nil {[m
+[31m-		return "video"[m
+[31m-	}[m
+[31m-	if msg.GetAudioMessage() != nil {[m
+[31m-		return "audio"[m
+[31m-	}[m
+[31m-	if msg.GetDocumentMessage() != nil {[m
+[31m-		return "document"[m
+[31m-	}[m
+[31m-	if msg.GetStickerMessage() != nil {[m
+[31m-		return "sticker"[m
+[31m-	}[m
+[31m-	if msg.GetContactMessage() != nil {[m
+[31m-		return "contact"[m
+[31m-	}[m
+[31m-	if msg.GetLocationMessage() != nil {[m
+[31m-		return "location"[m
+[31m-	}[m
+[31m-	// Note: Poll messages are handled by BuildPollCreation and the type is determined from RawMessage[m
+[31m-	if msg.GetButtonsMessage() != nil || msg.GetButtonsResponseMessage() != nil {[m
+[31m-		return "buttons"[m
+[31m-	}[m
+[31m-	if msg.GetListMessage() != nil || msg.GetListResponseMessage() != nil {[m
+[31m-		return "list"[m
+[31m-	}[m
+[31m-	if msg.GetTemplateMessage() != nil {[m
+[31m-		return "template"[m
+[31m-	}[m
+[31m-	return "text"[m
+[31m-}[m
+[31m-[m
+[31m-// publishSentMessageEvent creates and publishes a Message event for sent messages to RabbitMQ[m
+[31m-// messageTypeOverride is optional - if provided, it will be used instead of auto-detecting the type[m
+[31m-func (s *server) publishSentMessageEvent(token, userID, txtid string, recipient types.JID, msgid string, msg *waE2E.Message, timestamp time.Time, messageTypeOverride ...string) {[m
+[31m-	// Get the client to access store info[m
+[31m-	client := clientManager.GetWhatsmeowClient(txtid)[m
+[31m-	if client == nil {[m
+[31m-		return[m
+[31m-	}[m
+[31m-[m
+[31m-	// Get sender JID (account owner) - use ToNonAD() to remove device ID, matching manual messages[m
+[31m-	var senderJID types.JID[m
+[31m-	if client.Store != nil && client.Store.ID != nil {[m
+[31m-		senderJID = client.Store.ID.ToNonAD()[m
+[31m-	}[m
+[31m-[m
+[31m-	// Determine if it's a group[m
+[31m-	isGroup := recipient.Server == types.GroupServer || recipient.Server == types.BroadcastServer[m
+[31m-[m
+[31m-	// Determine message type[m
+[31m-	messageType := s.getMessageType(msg)[m
+[31m-	if len(messageTypeOverride) > 0 && messageTypeOverride[0] != "" {[m
+[31m-		messageType = messageTypeOverride[0][m
+[31m-	}[m
+[31m-[m
+[31m-	// Get LIDs for SenderAlt and RecipientAlt (matching manual message format)[m
+[31m-	var senderLID types.JID[m
+[31m-	var recipientLID types.JID[m
+[31m-	if client.Store != nil && client.Store.LIDs != nil {[m
+[31m-		ctx := context.Background()[m
+[31m-		[m
+[31m-		// Get sender LID[m
+[31m-		if !senderJID.IsEmpty() {[m
+[31m-			if lid, err := client.Store.LIDs.GetLIDForPN(ctx, senderJID); err == nil && !lid.IsEmpty() {[m
+[31m-				senderLID = lid[m
+[31m-			}[m
+[31m-		}[m
+[31m-		[m
+[31m-		// Get recipient LID (only for non-group chats)[m
+[31m-		if !isGroup && !recipient.IsEmpty() {[m
+[31m-			if lid, err := client.Store.LIDs.GetLIDForPN(ctx, recipient); err == nil && !lid.IsEmpty() {[m
+[31m-				recipientLID = lid[m
+[31m-			}[m
+[31m-		}[m
+[31m-	}[m
+[31m-[m
+[31m-	// Create MessageInfo structure[m
+[31m-	messageInfo := types.MessageInfo{[m
+[31m-		MessageSource: types.MessageSource{[m
+[31m-			Chat:     recipient,[m
+[31m-			Sender:   senderJID,[m
+[31m-			IsFromMe: true,[m
+[31m-			IsGroup:  isGroup,[m
+[31m-		},[m
+[31m-		ID:        msgid,[m
+[31m-		Timestamp: timestamp,[m
+[31m-		Type:      messageType,[m
+[31m-	}[m
+[31m-[m
+[31m-	// Set SenderAlt and RecipientAlt (LIDs)[m
+[31m-	if !senderLID.IsEmpty() {[m
+[31m-		messageInfo.SenderAlt = senderLID[m
+[31m-	}[m
+[31m-	if !recipientLID.IsEmpty() {[m
+[31m-		messageInfo.RecipientAlt = recipientLID[m
+[31m-	}[m
+[31m-[m
+[31m-	// Set DeviceSentMeta (matching manual message format)[m
+[31m-	messageInfo.DeviceSentMeta = &types.DeviceSentMeta{[m
+[31m-		DestinationJID: recipient.String(),[m
+[31m-		Phash:          "",[m
+[31m-	}[m
+[31m-[m
+[31m-	// Get push name from store[m
+[31m-	if client.Store != nil && client.Store.PushName != "" {[m
+[31m-		messageInfo.PushName = client.Store.PushName[m
+[31m-	}[m
+[31m-[m
+[31m-	// Wrap message in DeviceSentMessage structure for RawMessage (matching manual message format)[m
+[31m-	rawMessage := &waE2E.Message{[m
+[31m-		DeviceSentMessage: &waE2E.DeviceSentMessage{[m
+[31m-			DestinationJID: proto.String(recipient.String()),[m
+[31m-			Message:        msg,[m
+[31m-		},[m
+[31m-	}[m
+[31m-[m
+[31m-	// Create the event structure matching whatsmeow's events.Message[m
+[31m-	messageEvent := map[string]interface{}{[m
+[31m-		"Info":                  messageInfo,[m
+[31m-		"Message":               msg,[m
+[31m-		"IsEphemeral":           false,[m
+[31m-		"IsViewOnce":            false,[m
+[31m-		"IsViewOnceV2":          false,[m
+[31m-		"IsViewOnceV2Extension": false,[m
+[31m-		"IsDocumentWithCaption": false,[m
+[31m-		"IsLottieSticker":       false,[m
+[31m-		"IsBotInvoke":           false,[m
+[31m-		"IsEdit":                false,[m
+[31m-		"SourceWebMsg":          nil,[m
+[31m-		"UnavailableRequestID":  "",[m
+[31m-		"RetryCount":            0,[m
+[31m-		"NewsletterMeta":        nil,[m
+[31m-		"RawMessage":            rawMessage,[m
+[31m-	}[m
+[31m-[m
+[31m-	// Create the postmap structure that matches what sendEventWithWebHook expects[m
+[31m-	postmap := make(map[string]interface{})[m
+[31m-	postmap["type"] = "Message"[m
+[31m-	postmap["event"] = messageEvent[m
+[31m-[m
+[31m-	// Marshal to JSON[m
+[31m-	jsonData, err := json.Marshal(postmap)[m
+[31m-	if err != nil {[m
+[31m-		log.Error().Err(err).Msg("Failed to marshal sent message event to JSON")[m
+[31m-		return[m
+[31m-	}[m
+[31m-[m
+[31m-	// Publish directly to RabbitMQ (bypassing subscription check for sent messages)[m
+[31m-	go sendToGlobalRabbit(jsonData, token, userID)[m
+[31m-}[m
+[1mdiff --git a/helpers.go b/helpers.go[m
+[1mindex 83c4c62..598ea37 100644[m
+[1m--- a/helpers.go[m
+[1m+++ b/helpers.go[m
+[36m@@ -239,51 +239,108 @@[m [mfunc callHook(myurl string, payload map[string]string, userID string) {[m
+ 	callHookWithHmac(myurl, payload, userID, nil)[m
+ }[m
+ [m
+[32m+[m[32m// === SANITIZE / DIAGNÓSTICO DE PAYLOAD (SÓ PARA LOG) ===[m
+[32m+[m[32mfunc sanitizeWebhookBodyForLog([m
+[32m+[m	[32mbody any,[m
+[32m+[m[32m) (payloadBytes []byte, payload4k []byte, diagType, diagMime string, diagB64Len int, marshalErr error) {[m
+[32m+[m
+[32m+[m	[32m// copia rasa e mascara base64 ANTES do marshal (evita payload gigante)[m
+[32m+[m	[32mswitch m := body.(type) {[m
+[32m+[m
+[32m+[m	[32mcase map[string]interface{}:[m
+[32m+[m		[32mif t, ok := m["type"].(string); ok {[m
+[32m+[m			[32mdiagType = t[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif b64, ok := m["base64"].(string); ok {[m
+[32m+[m			[32mdiagB64Len = len(b64)[m
+[32m+[m			[32mm2 := make(map[string]interface{}, len(m))[m
+[32m+[m			[32mfor k, v := range m {[m
+[32m+[m				[32mm2[k] = v[m
+[32m+[m			[32m}[m
+[32m+[m			[32mm2["base64"] = fmt.Sprintf("<base64 %d bytes>", diagB64Len)[m
+[32m+[m			[32mbody = m2[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif s, ok := m["mime_type"].(string); ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m} else if s, ok := m["mimetype"].(string); ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m} else if s, ok := m["mime"].(string); ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m	[32mcase map[string]string:[m
+[32m+[m		[32mif t, ok := m["type"]; ok {[m
+[32m+[m			[32mdiagType = t[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif b64, ok := m["base64"]; ok {[m
+[32m+[m			[32mdiagB64Len = len(b64)[m
+[32m+[m			[32mm2 := make(map[string]string, len(m))[m
+[32m+[m			[32mfor k, v := range m {[m
+[32m+[m				[32mm2[k] = v[m
+[32m+[m			[32m}[m
+[32m+[m			[32mm2["base64"] = fmt.Sprintf("<base64 %d bytes>", diagB64Len)[m
+[32m+[m			[32mbody = m2[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif s, ok := m["mime_type"]; ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m} else if s, ok := m["mimetype"]; ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m} else if s, ok := m["mime"]; ok {[m
+[32m+[m			[32mdiagMime = s[m
+[32m+[m		[32m}[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mpayloadBytes, marshalErr = json.Marshal(body)[m
+[32m+[m	[32mif marshalErr != nil {[m
+[32m+[m		[32mpayload4k = []byte(fmt.Sprintf("marshal error: %v", marshalErr))[m
+[32m+[m		[32mreturn[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mpayload4k = payloadBytes[m
+[32m+[m	[32mif len(payload4k) > 4096 {[m
+[32m+[m		[32mpayload4k = payload4k[:4096][m
+[32m+[m	[32m}[m
+[32m+[m	[32mreturn[m
+[32m+[m[32m}[m
+[32m+[m
+ // webhook for regular messages with HMAC[m
+ func callHookWithHmac(myurl string, payload map[string]string, userID string, encryptedHmacKey []byte) {[m
+ 	log.Info().Str("url", myurl).Str("userID", userID).Msg("Sending POST to client with retry logic")[m
+ [m
+ 	client := clientManager.GetHTTPClient(userID)[m
+ [m
+[31m-	// Retry settings[m
+ 	maxRetries := 1[m
+ 	if *webhookRetryEnabled {[m
+ 		maxRetries = *webhookRetryCount[m
+ 	}[m
+ [m
+ 	var lastError error[m
+[31m-[m
+ 	var body interface{} = payload[m
+ [m
+[31m-	// Starts the retry loop.[m
+ 	for attempt := 0; attempt < maxRetries; attempt++ {[m
+[31m-		if attempt > 0 {[m
+[31m-			backoffFactor := 1 << uint(attempt-1)[m
+[31m-[m
+[31m-			// Calculate the final delay.[m
+[31m-			delayDuration := time.Duration(*webhookRetryDelaySeconds) * time.Second * time.Duration(backoffFactor)[m
+ [m
+[32m+[m		[32mif attempt > 0 {[m
+[32m+[m			[32mbackoff := time.Duration(*webhookRetryDelaySeconds) * time.Second * time.Duration(1<<(attempt-1))[m
+ 			log.Warn().[m
+ 				Int("attempt", attempt+1).[m
+ 				Str("url", myurl).[m
+[31m-				Dur("delay", delayDuration).[m
+[32m+[m				[32mDur("delay", backoff).[m
+ 				Msg("Retrying webhook request with exponential backoff...")[m
+[31m-[m
+[31m-			time.Sleep(delayDuration)[m
+[32m+[m			[32mtime.Sleep(backoff)[m
+ 		}[m
+ [m
+ 		var req *resty.Request[m
+ 		var hmacSignature string[m
+[31m-		var marshalErr error[m
+ [m
+ 		format := os.Getenv("WEBHOOK_FORMAT")[m
+ [m
+ 		if format == "json" {[m
+[31m-			var jsonBody []byte[m
+[31m-[m
+ 			if jsonStr, ok := payload["jsonData"]; ok {[m
+ 				var postmap map[string]interface{}[m
+[31m-[m
+ 				if err := json.Unmarshal([]byte(jsonStr), &postmap); err == nil {[m
+ 					if instanceName, ok := payload["instanceName"]; ok {[m
+ 						postmap["instanceName"] = instanceName[m
+[36m@@ -293,36 +350,22 @@[m [mfunc callHookWithHmac(myurl string, payload map[string]string, userID string, en[m
+ 				}[m
+ 			}[m
+ [m
+[31m-			// Marshal body to JSON for HMAC signature[m
+[31m-			jsonBody, marshalErr = json.Marshal(body)[m
+[31m-			if marshalErr != nil {[m
+[31m-				log.Error().Err(marshalErr).Msg("Failed to marshal body for HMAC")[m
+[32m+[m			[32mjsonBody, err := json.Marshal(body)[m
+[32m+[m			[32mif err == nil && len(encryptedHmacKey) > 0 {[m
+[32m+[m				[32mhmacSignature, _ = generateHmacSignature(jsonBody, encryptedHmacKey)[m
+ 			}[m
+ [m
+[31m-			// Generate HMAC signature if key exists[m
+[31m-			if len(encryptedHmacKey) > 0 && len(jsonBody) > 0 {[m
+[31m-				var err error[m
+[31m-				hmacSignature, err = generateHmacSignature(jsonBody, encryptedHmacKey)[m
+[31m-				if err != nil {[m
+[31m-					log.Error().Err(err).Msg("Failed to generate HMAC signature")[m
+[31m-				}[m
+[31m-			}[m
+[31m-[m
+[31m-			req = client.R().SetHeader("Content-Type", "application/json").SetBody(body)[m
+[32m+[m			[32mreq = client.R().[m
+[32m+[m				[32mSetHeader("Content-Type", "application/json").[m
+[32m+[m				[32mSetBody(body)[m
+ [m
+ 		} else {[m
+[31m-[m
+ 			if len(encryptedHmacKey) > 0 {[m
+[31m-				formData := url.Values{}[m
+[32m+[m				[32mform := url.Values{}[m
+ 				for k, v := range payload {[m
+[31m-					formData.Add(k, v)[m
+[31m-				}[m
+[31m-				formString := formData.Encode()[m
+[31m-				var err error[m
+[31m-				hmacSignature, err = generateHmacSignature([]byte(formString), encryptedHmacKey)[m
+[31m-				if err != nil {[m
+[31m-					log.Error().Err(err).Msg("Failed to generate HMAC signature")[m
+[32m+[m					[32mform.Add(k, v)[m
+ 				}[m
+[32m+[m				[32mhmacSignature, _ = generateHmacSignature([]byte(form.Encode()), encryptedHmacKey)[m
+ 			}[m
+ 			req = client.R().SetFormData(payload)[m
+ 			body = payload[m
+[36m@@ -333,20 +376,39 @@[m [mfunc callHookWithHmac(myurl string, payload map[string]string, userID string, en[m
+ 		}[m
+ [m
+ 		resp, postErr := req.Post(myurl)[m
+[31m-[m
+ 		lastError = postErr[m
+ [m
+ 		if postErr != nil {[m
+[31m-			log.Error().Err(postErr).Int("attempt", attempt+1).Str("url", myurl).Msg("Webhook failed due to network/IO error")[m
+[32m+[m			[32mlog.Error().Err(postErr).Str("url", myurl).Msg("Webhook failed due to network/IO error")[m
+ 			continue[m
+ 		}[m
+ [m
+ 		if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {[m
+[31m-			lastError = fmt.Errorf("unexpected status code: %d. Body: %s", resp.StatusCode(), string(resp.Body()))[m
+[32m+[m			[32mlastError = fmt.Errorf([m
+[32m+[m				[32m"unexpected status code: %d. Body: %s",[m
+[32m+[m				[32mresp.StatusCode(),[m
+[32m+[m				[32mstring(resp.Body()),[m
+[32m+[m			[32m)[m
+[32m+[m
+[32m+[m			[32mpayloadBytes, payload4k, diagType, diagMime, diagB64Len, marshalErr :=[m
+[32m+[m				[32msanitizeWebhookBodyForLog(body)[m
+[32m+[m
+[32m+[m			[32mresp4k := resp.Body()[m
+[32m+[m			[32mif len(resp4k) > 4096 {[m
+[32m+[m				[32mresp4k = resp4k[:4096][m
+[32m+[m			[32m}[m
+[32m+[m
+ 			log.Error().[m
+ 				Int("status", resp.StatusCode()).[m
+ 				Int("attempt", attempt+1).[m
+ 				Str("url", myurl).[m
+[32m+[m				[32mBool("payload_marshal_ok", marshalErr == nil).[m
+[32m+[m				[32mInt("payload_len", len(payloadBytes)).[m
+[32m+[m				[32mStr("payload_4k", string(payload4k)).[m
+[32m+[m				[32mStr("resp_4k", string(resp4k)).[m
+[32m+[m				[32mStr("diag_type", diagType).[m
+[32m+[m				[32mStr("diag_mime", diagMime).[m
+[32m+[m				[32mInt("diag_base64_len", diagB64Len).[m
+ 				Msg("Webhook failed due to non-2xx status code")[m
+ [m
+ 			if !*webhookRetryEnabled {[m
+[36m@@ -360,29 +422,7 @@[m [mfunc callHookWithHmac(myurl string, payload map[string]string, userID string, en[m
+ 	}[m
+ [m
+ 	if lastError != nil {[m
+[31m-		log.Error().Str("url", myurl).Msg("Webhook permanently failed after all retries. Sending to error queue...")[m
+[31m-[m
+[31m-		errorPayloadMap := make(map[string]interface{})[m
+[31m-		if p, ok := body.(map[string]string); ok {[m
+[31m-[m
+[31m-			for k, v := range p {[m
+[31m-				errorPayloadMap[k] = v[m
+[31m-			}[m
+[31m-		} else if p, ok := body.(map[string]interface{}); ok {[m
+[31m-[m
+[31m-			errorPayloadMap = p[m
+[31m-		}[m
+[31m-[m
+[31m-		errorPayload := WebhookErrorPayload{[m
+[31m-			URL:              myurl,[m
+[31m-			Payload:          errorPayloadMap,[m
+[31m-			UserID:           userID,[m
+[31m-			EncryptedHmacKey: hex.EncodeToString(encryptedHmacKey),[m
+[31m-			AttemptTime:      time.Now(),[m
+[31m-			ErrorMessage:     lastError.Error(),[m
+[31m-		}[m
+[31m-[m
+[31m-		PublishDataErrorToQueue(errorPayload)[m
+[32m+[m		[32mlog.Error().Str("url", myurl).Msg("Webhook permanently failed after all retries")[m
+ 	}[m
+ }[m
+ [m
+[36m@@ -480,29 +520,28 @@[m [mfunc callHookFileWithHmac(myurl string, payload map[string]string, userID string[m
+ 	}[m
+ [m
+ 	if lastError != nil {[m
+[31m-		log.Error().Str("url", myurl).Msg("File webhook permanently failed after all retries. Sending to error queue...")[m
+[32m+[m		[32mlog.Error().Str("url", myurl).Msg("Webhook permanently failed after all retries. Sending to error queue...")[m
+ [m
+[31m-		errorPayloadMap := make(map[string]interface{})[m
+[32m+[m		[32merrorPayloadMap := make(map[string]interface{}, len(finalPayload)+1)[m
+ 		for k, v := range finalPayload {[m
+ 			errorPayloadMap[k] = v[m
+ 		}[m
+[32m+[m		[32m// opcional: inclui caminho/identificação do arquivo[m
+[32m+[m		[32merrorPayloadMap["file"] = file[m
+ [m
+[31m-		errorPayload := WebhookFileErrorPayload{[m
+[32m+[m		[32merrorPayload := WebhookErrorPayload{[m
+ 			URL:              myurl,[m
+ 			Payload:          errorPayloadMap,[m
+ 			UserID:           userID,[m
+ 			EncryptedHmacKey: hex.EncodeToString(encryptedHmacKey),[m
+[31m-			FilePath:         file,[m
+ 			AttemptTime:      time.Now(),[m
+ 			ErrorMessage:     lastError.Error(),[m
+ 		}[m
+ [m
+[31m-		PublishFileErrorToQueue(errorPayload)[m
+[31m-[m
+[31m-		return fmt.Errorf("webhook failed permanently: %w", lastError)[m
+[32m+[m		[32mPublishDataErrorToQueue(errorPayload)[m
+ 	}[m
+ [m
+[31m-	return nil[m
+[32m+[m	[32mreturn lastError[m
+ }[m
+ [m
+ func (s *server) respondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) {[m
+[36m@@ -538,7 +577,6 @@[m [mfunc ProcessOutgoingMedia(userID string, contactJID string, messageID string, da[m
+ [m
+ 	// Process S3 upload if enabled[m
+ 	if s3Config.Enabled && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-		ensureS3ClientForUser(userID)[m
+ 		// Process S3 upload (outgoing messages are always in outbox)[m
+ 		s3Data, err := GetS3Manager().ProcessMediaForS3([m
+ 			context.Background(),[m
+[1mdiff --git a/jid_normalize.go b/jid_normalize.go[m
+[1mnew file mode 100644[m
+[1mindex 0000000..403c718[m
+[1m--- /dev/null[m
+[1m+++ b/jid_normalize.go[m
+[36m@@ -0,0 +1,11 @@[m
+[32m+[m[32mpackage main[m
+[32m+[m
+[32m+[m[32mimport "github.com/jmoiron/sqlx"[m
+[32m+[m
+[32m+[m[32m// Normaliza JID (@lid → @s.whatsapp.net) antes de persistir ou responder[m
+[32m+[m[32mfunc normalizeChatJID(db *sqlx.DB, jid string) string {[m
+[32m+[m	[32mif jid == "" {[m
+[32m+[m		[32mreturn jid[m
+[32m+[m	[32m}[m
+[32m+[m	[32mreturn resolveLIDToPhoneJIDNoCtx(db, jid)[m
+[32m+[m[32m}[m
+[1mdiff --git a/jid_resolver.go b/jid_resolver.go[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f8d97ca[m
+[1m--- /dev/null[m
+[1m+++ b/jid_resolver.go[m
+[36m@@ -0,0 +1,28 @@[m
+[32m+[m[32mpackage main[m
+[32m+[m
+[32m+[m[32mimport ([m
+[32m+[m	[32m"strings"[m
+[32m+[m
+[32m+[m	[32m"github.com/jmoiron/sqlx"[m
+[32m+[m[32m)[m
+[32m+[m
+[32m+[m[32mfunc resolveLIDToPhoneJIDNoCtx(db *sqlx.DB, jid string) string {[m
+[32m+[m	[32mif !strings.HasSuffix(jid, "@lid") {[m
+[32m+[m		[32mreturn jid[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mlid := strings.TrimSuffix(jid, "@lid")[m
+[32m+[m
+[32m+[m	[32mvar pn string[m
+[32m+[m	[32mq := `SELECT pn FROM whatsmeow_lid_map WHERE lid = $1 LIMIT 1`[m
+[32m+[m	[32mif db.DriverName() == "sqlite" {[m
+[32m+[m		[32mq = `SELECT pn FROM whatsmeow_lid_map WHERE lid = ? LIMIT 1`[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32merr := db.QueryRow(q, lid).Scan(&pn)[m
+[32m+[m	[32mif err != nil || pn == "" {[m
+[32m+[m		[32mreturn jid // fallback: mantém @lid[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn pn + "@s.whatsapp.net"[m
+[32m+[m[32m}[m
+[1mdiff --git a/main.go b/main.go[m
+[1mindex 36b2bed..0d6d723 100755[m
+[1m--- a/main.go[m
+[1m+++ b/main.go[m
+[36m@@ -51,7 +51,6 @@[m [mvar ([m
+ 	logType             = flag.String("logtype", "console", "Type of log output (console or json)")[m
+ 	skipMedia           = flag.Bool("skipmedia", false, "Do not attempt to download media in messages")[m
+ 	osName              = flag.String("osname", "Mac OS 10", "Connection OSName in Whatsapp")[m
+[31m-	platformType        = flag.String("platformtype", "DESKTOP", "Device platform type (DESKTOP, IPAD, ANDROID_TABLET, IOS_PHONE, ANDROID_PHONE, etc.)")[m
+ 	colorOutput         = flag.Bool("color", false, "Enable colored output for console logs")[m
+ 	sslcert             = flag.String("sslcertificate", "", "SSL Certificate File")[m
+ 	sslprivkey          = flag.String("sslprivatekey", "", "SSL Certificate Private Key File")[m
+[36m@@ -80,7 +79,7 @@[m [mvar ([m
+ [m
+ var privateIPBlocks []*net.IPNet[m
+ [m
+[31m-const version = "1.0.6"[m
+[32m+[m[32mconst version = "1.0.5"[m
+ [m
+ func newSafeHTTPClient() *http.Client {[m
+ 	return &http.Client{[m
+[36m@@ -226,11 +225,6 @@[m [mfunc main() {[m
+ 		*osName = v[m
+ 	}[m
+ [m
+[31m-	// Override platformType from environment variable if set[m
+[31m-	if v := os.Getenv("SESSION_PLATFORM_TYPE"); v != "" {[m
+[31m-		*platformType = v[m
+[31m-	}[m
+[31m-[m
+ 	if *versionFlag {[m
+ 		fmt.Printf("WuzAPI version %s\n", version)[m
+ 		os.Exit(0)[m
+[36m@@ -383,8 +377,15 @@[m [mfunc main() {[m
+ 		}[m
+ 	}()[m
+ [m
+[31m-	// Set DB reference in S3Manager for lazy client initialization[m
+[31m-	GetS3Manager().SetDB(db)[m
+[32m+[m	[32m// Initialize the schema[m
+[32m+[m	[32mif err = initializeSchema(db); err != nil {[m
+[32m+[m		[32mlog.Fatal().Err(err).Msg("Failed to initialize schema")[m
+[32m+[m		[32m// Perform cleanup before exiting[m
+[32m+[m		[32mif err := db.Close(); err != nil {[m
+[32m+[m			[32mlog.Error().Err(err).Msg("Failed to close database connection during cleanup")[m
+[32m+[m		[32m}[m
+[32m+[m		[32mos.Exit(1)[m
+[32m+[m	[32m}[m
+ [m
+ 	var dbLog waLog.Logger[m
+ 	if *waDebug != "" {[m
+[36m@@ -410,16 +411,6 @@[m [mfunc main() {[m
+ 		os.Exit(1)[m
+ 	}[m
+ [m
+[31m-	// Initialize the schema[m
+[31m-	if err = initializeSchema(db); err != nil {[m
+[31m-		log.Fatal().Err(err).Msg("Failed to initialize schema")[m
+[31m-		// Perform cleanup before exiting[m
+[31m-		if err := db.Close(); err != nil {[m
+[31m-			log.Error().Err(err).Msg("Failed to close database connection during cleanup")[m
+[31m-		}[m
+[31m-		os.Exit(1)[m
+[31m-	}[m
+[31m-[m
+ 	serverMode := HTTP[m
+ 	if *mode == "stdio" {[m
+ 		serverMode = Stdio[m
+[1mdiff --git a/migrations.go b/migrations.go[m
+[1mindex 46f2a3a..e74e2ae 100644[m
+[1m--- a/migrations.go[m
+[1m+++ b/migrations.go[m
+[36m@@ -17,89 +17,20 @@[m [mtype Migration struct {[m
+ }[m
+ [m
+ var migrations = []Migration{[m
+[31m-	{[m
+[31m-		ID:    1,[m
+[31m-		Name:  "initial_schema",[m
+[31m-		UpSQL: initialSchemaSQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:   2,[m
+[31m-		Name: "add_proxy_url",[m
+[31m-		UpSQL: `[m
+[31m-            -- PostgreSQL version[m
+[31m-            DO $$[m
+[31m-            BEGIN[m
+[31m-                IF NOT EXISTS ([m
+[31m-                    SELECT 1 FROM information_schema.columns [m
+[31m-                    WHERE table_name = 'users' AND column_name = 'proxy_url'[m
+[31m-                ) THEN[m
+[31m-                    ALTER TABLE users ADD COLUMN proxy_url TEXT DEFAULT '';[m
+[31m-                END IF;[m
+[31m-            END $$;[m
+[31m-            [m
+[31m-            -- SQLite version (handled in code)[m
+[31m-            `,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    3,[m
+[31m-		Name:  "change_id_to_string",[m
+[31m-		UpSQL: changeIDToStringSQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    4,[m
+[31m-		Name:  "add_s3_support",[m
+[31m-		UpSQL: addS3SupportSQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    5,[m
+[31m-		Name:  "add_message_history",[m
+[31m-		UpSQL: addMessageHistorySQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    6,[m
+[31m-		Name:  "add_quoted_message_id",[m
+[31m-		UpSQL: addQuotedMessageIDSQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    7,[m
+[31m-		Name:  "add_hmac_key",[m
+[31m-		UpSQL: addHmacKeySQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    8,[m
+[31m-		Name:  "add_data_json",[m
+[31m-		UpSQL: addDataJsonSQL,[m
+[31m-	},[m
+[31m-	{[m
+[31m-		ID:    9,[m
+[31m-		Name:  "add_whatsmeow_message_secrets_message_id_idx",[m
+[31m-		UpSQL: addWhatsmeowMessageSecretsMessageIDIndexSQL,[m
+[31m-	},[m
+[32m+[m	[32m{ID: 1, Name: "initial_schema", UpSQL: initialSchemaSQL},[m
+[32m+[m	[32m{ID: 2, Name: "add_proxy_url", UpSQL: addProxyURLSQL},[m
+[32m+[m	[32m{ID: 3, Name: "change_id_to_string", UpSQL: changeIDToStringSQL},[m
+[32m+[m	[32m{ID: 4, Name: "add_s3_support", UpSQL: addS3SupportSQL},[m
+[32m+[m	[32m{ID: 5, Name: "add_message_history", UpSQL: addMessageHistorySQL},[m
+[32m+[m	[32m{ID: 6, Name: "add_quoted_message_id", UpSQL: addQuotedMessageIDSQL},[m
+[32m+[m	[32m{ID: 7, Name: "add_hmac_key", UpSQL: addHmacKeySQL},[m
+[32m+[m	[32m{ID: 8, Name: "add_data_json", UpSQL: addDataJsonSQL},[m
+[32m+[m	[32m{ID: 9, Name: "add_wa_contacts", UpSQL: addWAContactsSQL},[m
+ }[m
+ [m
+[31m-const changeIDToStringSQL = `[m
+[31m--- Migration to change ID from integer to random string[m
+[31m-DO $$[m
+[31m-BEGIN[m
+[31m-    -- Only execute if the column is currently integer type[m
+[31m-    IF EXISTS ([m
+[31m-        SELECT 1 FROM information_schema.columns[m
+[31m-        WHERE table_name = 'users' AND column_name = 'id' AND data_type = 'integer'[m
+[31m-    ) THEN[m
+[31m-        -- For PostgreSQL[m
+[31m-        ALTER TABLE users ADD COLUMN new_id TEXT;[m
+[31m-		UPDATE users SET new_id = md5(random()::text || id::text || clock_timestamp()::text);[m
+[31m-		ALTER TABLE users DROP CONSTRAINT users_pkey;[m
+[31m-        ALTER TABLE users DROP COLUMN id CASCADE;[m
+[31m-        ALTER TABLE users RENAME COLUMN new_id TO id;[m
+[31m-        ALTER TABLE users ALTER COLUMN id SET NOT NULL;[m
+[31m-        ALTER TABLE users ADD PRIMARY KEY (id);[m
+[31m-    END IF;[m
+[31m-END $$;[m
+[31m-`[m
+[32m+[m[32m/* ===================== SQL BLOBS (POSTGRES) ===================== */[m
+ [m
+ const initialSchemaSQL = `[m
+[31m--- PostgreSQL version[m
+ DO $$[m
+ BEGIN[m
+     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN[m
+[36m@@ -117,62 +48,78 @@[m [mBEGIN[m
+         );[m
+     END IF;[m
+ END $$;[m
+[32m+[m[32m`[m
+ [m
+[31m--- SQLite version (handled in code)[m
+[32m+[m[32mconst addProxyURLSQL = `[m
+[32m+[m[32mDO $$[m
+[32m+[m[32mBEGIN[m
+[32m+[m[32m    IF NOT EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name = 'users' AND column_name = 'proxy_url'[m
+[32m+[m[32m    ) THEN[m
+[32m+[m[32m        ALTER TABLE users ADD COLUMN proxy_url TEXT DEFAULT '';[m
+[32m+[m[32m    END IF;[m
+[32m+[m[32mEND $$;[m
+[32m+[m[32m`[m
+[32m+[m
+[32m+[m[32mconst changeIDToStringSQL = `[m
+[32m+[m[32mDO $$[m
+[32m+[m[32mBEGIN[m
+[32m+[m[32m    IF EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name = 'users' AND column_name = 'id' AND data_type = 'integer'[m
+[32m+[m[32m    ) THEN[m
+[32m+[m[32m        ALTER TABLE users ADD COLUMN new_id TEXT;[m
+[32m+[m[32m        UPDATE users SET new_id = md5(random()::text || id::text || clock_timestamp()::text);[m
+[32m+[m[32m        ALTER TABLE users DROP CONSTRAINT users_pkey;[m
+[32m+[m[32m        ALTER TABLE users DROP COLUMN id CASCADE;[m
+[32m+[m[32m        ALTER TABLE users RENAME COLUMN new_id TO id;[m
+[32m+[m[32m        ALTER TABLE users ALTER COLUMN id SET NOT NULL;[m
+[32m+[m[32m        ALTER TABLE users ADD PRIMARY KEY (id);[m
+[32m+[m[32m    END IF;[m
+[32m+[m[32mEND $$;[m
+ `[m
+ [m
+ const addS3SupportSQL = `[m
+[31m--- PostgreSQL version[m
+ DO $$[m
+ BEGIN[m
+[31m-    -- Add S3 configuration columns if they don't exist[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_enabled') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_enabled') THEN[m
+         ALTER TABLE users ADD COLUMN s3_enabled BOOLEAN DEFAULT FALSE;[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_endpoint') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_endpoint') THEN[m
+         ALTER TABLE users ADD COLUMN s3_endpoint TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_region') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_region') THEN[m
+         ALTER TABLE users ADD COLUMN s3_region TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_bucket') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_bucket') THEN[m
+         ALTER TABLE users ADD COLUMN s3_bucket TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_access_key') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_access_key') THEN[m
+         ALTER TABLE users ADD COLUMN s3_access_key TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_secret_key') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_secret_key') THEN[m
+         ALTER TABLE users ADD COLUMN s3_secret_key TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_path_style') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_path_style') THEN[m
+         ALTER TABLE users ADD COLUMN s3_path_style BOOLEAN DEFAULT TRUE;[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_public_url') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_public_url') THEN[m
+         ALTER TABLE users ADD COLUMN s3_public_url TEXT DEFAULT '';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'media_delivery') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='media_delivery') THEN[m
+         ALTER TABLE users ADD COLUMN media_delivery TEXT DEFAULT 'base64';[m
+     END IF;[m
+[31m-    [m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 's3_retention_days') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='s3_retention_days') THEN[m
+         ALTER TABLE users ADD COLUMN s3_retention_days INTEGER DEFAULT 30;[m
+     END IF;[m
+ END $$;[m
+ `[m
+ [m
+ const addMessageHistorySQL = `[m
+[31m--- PostgreSQL version[m
+ DO $$[m
+ BEGIN[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'message_history') THEN[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='message_history') THEN[m
+         CREATE TABLE message_history ([m
+             id SERIAL PRIMARY KEY,[m
+             user_id TEXT NOT NULL,[m
+[36m@@ -185,485 +132,246 @@[m [mBEGIN[m
+             media_link TEXT,[m
+             UNIQUE(user_id, message_id)[m
+         );[m
+[31m-        CREATE INDEX idx_message_history_user_chat_timestamp ON message_history (user_id, chat_jid, timestamp DESC);[m
+[32m+[m[32m        CREATE INDEX idx_message_history_user_chat_timestamp[m
+[32m+[m[32m            ON message_history (user_id, chat_jid, timestamp DESC);[m
+     END IF;[m
+[31m-    [m
+[31m-    -- Add history column to users table if it doesn't exist[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'history') THEN[m
+[32m+[m
+[32m+[m[32m    IF NOT EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name='users' AND column_name='history'[m
+[32m+[m[32m    ) THEN[m
+         ALTER TABLE users ADD COLUMN history INTEGER DEFAULT 0;[m
+     END IF;[m
+ END $$;[m
+ `[m
+ [m
+ const addQuotedMessageIDSQL = `[m
+[31m--- PostgreSQL version[m
+ DO $$[m
+ BEGIN[m
+[31m-    -- Add quoted_message_id column to message_history table if it doesn't exist[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'message_history' AND column_name = 'quoted_message_id') THEN[m
+[32m+[m[32m    IF NOT EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name='message_history' AND column_name='quoted_message_id'[m
+[32m+[m[32m    ) THEN[m
+         ALTER TABLE message_history ADD COLUMN quoted_message_id TEXT;[m
+     END IF;[m
+ END $$;[m
+ `[m
+ [m
+ const addDataJsonSQL = `[m
+[31m--- PostgreSQL version[m
+ DO $$[m
+ BEGIN[m
+[31m-    -- Add dataJson column to message_history table if it doesn't exist[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'message_history' AND column_name = 'datajson') THEN[m
+[32m+[m[32m    IF NOT EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name='message_history' AND column_name='datajson'[m
+[32m+[m[32m    ) THEN[m
+         ALTER TABLE message_history ADD COLUMN datajson TEXT;[m
+     END IF;[m
+ END $$;[m
+[32m+[m[32m`[m
+ [m
+[31m--- SQLite version (handled in code)[m
+[32m+[m[32mconst addHmacKeySQL = `[m
+[32m+[m[32mDO $$[m
+[32m+[m[32mBEGIN[m
+[32m+[m[32m    IF NOT EXISTS ([m
+[32m+[m[32m        SELECT 1 FROM information_schema.columns[m
+[32m+[m[32m        WHERE table_name='users' AND column_name='hmac_key'[m
+[32m+[m[32m    ) THEN[m
+[32m+[m[32m        ALTER TABLE users ADD COLUMN hmac_key BYTEA;[m
+[32m+[m[32m    END IF;[m
+[32m+[m[32mEND $$;[m
+ `[m
+ [m
+[31m-const addWhatsmeowMessageSecretsMessageIDIndexSQL = `[m
+[31m--- PostgreSQL version[m
+[32m+[m[32mconst addWAContactsSQL = `[m
+ DO $$[m
+ BEGIN[m
+[31m-	CREATE INDEX IF NOT EXISTS whatsmeow_message_secrets_message_id_idx[m
+[31m-	ON whatsmeow_message_secrets (message_id);[m
+[32m+[m[32m    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='wa_contacts') THEN[m
+[32m+[m[32m        CREATE TABLE wa_contacts ([m
+[32m+[m[32m            user_id TEXT NOT NULL,[m
+[32m+[m[32m            jid_phone TEXT NOT NULL,[m
+[32m+[m[32m            jid_lid TEXT,[m
+[32m+[m[32m            push_name TEXT,[m
+[32m+[m[32m            business_name TEXT,[m
+[32m+[m[32m            updated_at TIMESTAMP NOT NULL,[m
+[32m+[m[32m            PRIMARY KEY (user_id, jid_phone)[m
+[32m+[m[32m        );[m
+[32m+[m[32m        CREATE INDEX idx_wa_contacts_user_lid[m
+[32m+[m[32m            ON wa_contacts (user_id, jid_lid);[m
+[32m+[m[32m    END IF;[m
+ END $$;[m
+[31m--- SQLite version (handled in code)[m
+ `[m
+ [m
+[31m-// GenerateRandomID creates a random string ID[m
+[31m-func GenerateRandomID() (string, error) {[m
+[31m-	bytes := make([]byte, 16) // 128 bits[m
+[31m-	if _, err := rand.Read(bytes); err != nil {[m
+[31m-		return "", fmt.Errorf("failed to generate random ID: %w", err)[m
+[32m+[m[32m/* ===================== SQLITE COMPAT ===================== */[m
+[32m+[m
+[32m+[m[32mconst sqliteNoopSQL = `SELECT 1;`[m
+[32m+[m
+[32m+[m[32m// No SQLite não existe DO $$ / information_schema.[m
+[32m+[m[32m// Então: a migration 1 cria o schema "completo" (incluindo colunas/tabelas das migrações posteriores).[m
+[32m+[m[32m// As migrações 2..9 viram no-op, mas ainda são marcadas como aplicadas.[m
+[32m+[m[32mconst initialSchemaSQLiteSQL = `[m
+[32m+[m[32mCREATE TABLE IF NOT EXISTS users ([m
+[32m+[m[32m  id TEXT PRIMARY KEY,[m
+[32m+[m[32m  name TEXT NOT NULL,[m
+[32m+[m[32m  token TEXT NOT NULL,[m
+[32m+[m[32m  webhook TEXT NOT NULL DEFAULT '',[m
+[32m+[m[32m  jid TEXT NOT NULL DEFAULT '',[m
+[32m+[m[32m  qrcode TEXT NOT NULL DEFAULT '',[m
+[32m+[m[32m  connected INTEGER,[m
+[32m+[m[32m  expiration INTEGER,[m
+[32m+[m[32m  events TEXT NOT NULL DEFAULT '',[m
+[32m+[m[32m  proxy_url TEXT DEFAULT '',[m
+[32m+[m
+[32m+[m[32m  s3_enabled INTEGER DEFAULT 0,[m
+[32m+[m[32m  s3_endpoint TEXT DEFAULT '',[m
+[32m+[m[32m  s3_region TEXT DEFAULT '',[m
+[32m+[m[32m  s3_bucket TEXT DEFAULT '',[m
+[32m+[m[32m  s3_access_key TEXT DEFAULT '',[m
+[32m+[m[32m  s3_secret_key TEXT DEFAULT '',[m
+[32m+[m[32m  s3_path_style INTEGER DEFAULT 1,[m
+[32m+[m[32m  s3_public_url TEXT DEFAULT '',[m
+[32m+[m[32m  media_delivery TEXT DEFAULT 'base64',[m
+[32m+[m[32m  s3_retention_days INTEGER DEFAULT 30,[m
+[32m+[m
+[32m+[m[32m  history INTEGER DEFAULT 0,[m
+[32m+[m[32m  hmac_key BLOB[m
+[32m+[m[32m);[m
+[32m+[m
+[32m+[m[32mCREATE TABLE IF NOT EXISTS message_history ([m
+[32m+[m[32m  id INTEGER PRIMARY KEY AUTOINCREMENT,[m
+[32m+[m[32m  user_id TEXT NOT NULL,[m
+[32m+[m[32m  chat_jid TEXT NOT NULL,[m
+[32m+[m[32m  sender_jid TEXT NOT NULL,[m
+[32m+[m[32m  message_id TEXT NOT NULL,[m
+[32m+[m[32m  timestamp DATETIME NOT NULL,[m
+[32m+[m[32m  message_type TEXT NOT NULL,[m
+[32m+[m[32m  text_content TEXT,[m
+[32m+[m[32m  media_link TEXT,[m
+[32m+[m[32m  quoted_message_id TEXT,[m
+[32m+[m[32m  datajson TEXT,[m
+[32m+[m[32m  UNIQUE(user_id, message_id)[m
+[32m+[m[32m);[m
+[32m+[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS idx_message_history_user_chat_timestamp[m
+[32m+[m[32m  ON message_history (user_id, chat_jid, timestamp DESC);[m
+[32m+[m
+[32m+[m[32mCREATE TABLE IF NOT EXISTS wa_contacts ([m
+[32m+[m[32m  user_id TEXT NOT NULL,[m
+[32m+[m[32m  jid_phone TEXT NOT NULL,[m
+[32m+[m[32m  jid_lid TEXT,[m
+[32m+[m[32m  push_name TEXT,[m
+[32m+[m[32m  business_name TEXT,[m
+[32m+[m[32m  updated_at DATETIME NOT NULL,[m
+[32m+[m[32m  PRIMARY KEY (user_id, jid_phone)[m
+[32m+[m[32m);[m
+[32m+[m
+[32m+[m[32mCREATE INDEX IF NOT EXISTS idx_wa_contacts_user_lid[m
+[32m+[m[32m  ON wa_contacts (user_id, jid_lid);[m
+[32m+[m[32m`[m
+[32m+[m
+[32m+[m[32mfunc upSQLFor(db *sqlx.DB, m Migration) string {[m
+[32m+[m	[32mif db.DriverName() == "sqlite" {[m
+[32m+[m		[32mif m.ID == 1 {[m
+[32m+[m			[32mreturn initialSchemaSQLiteSQL[m
+[32m+[m		[32m}[m
+[32m+[m		[32mreturn sqliteNoopSQL[m
+ 	}[m
+[31m-	return hex.EncodeToString(bytes), nil[m
+[32m+[m	[32mreturn m.UpSQL[m
+ }[m
+ [m
+[31m-// Initialize the database with migrations[m
+[32m+[m[32m/* ===================== INIT ===================== */[m
+[32m+[m
+ func initializeSchema(db *sqlx.DB) error {[m
+[31m-	// Create migrations table if it doesn't exist[m
+ 	if err := createMigrationsTable(db); err != nil {[m
+[31m-		return fmt.Errorf("failed to create migrations table: %w", err)[m
+[32m+[m		[32mreturn err[m
+ 	}[m
+ [m
+[31m-	// Get already applied migrations[m
+ 	applied, err := getAppliedMigrations(db)[m
+ 	if err != nil {[m
+[31m-		return fmt.Errorf("failed to get applied migrations: %w", err)[m
+[32m+[m		[32mreturn err[m
+ 	}[m
+ [m
+[31m-	// Apply missing migrations[m
+[31m-	for _, migration := range migrations {[m
+[31m-		if _, ok := applied[migration.ID]; !ok {[m
+[31m-			if err := applyMigration(db, migration); err != nil {[m
+[31m-				return fmt.Errorf("failed to apply migration %d: %w", migration.ID, err)[m
+[32m+[m	[32mfor _, m := range migrations {[m
+[32m+[m		[32mif _, ok := applied[m.ID]; !ok {[m
+[32m+[m			[32mif err := applyMigration(db, m); err != nil {[m
+[32m+[m				[32mreturn fmt.Errorf("migration %d failed: %w", m.ID, err)[m
+ 			}[m
+ 		}[m
+ 	}[m
+[31m-[m
+ 	return nil[m
+ }[m
+ [m
+[31m-func createMigrationsTable(db *sqlx.DB) error {[m
+[31m-	var tableExists bool[m
+[31m-	var err error[m
+[32m+[m[32m/* ===================== HELPERS ===================== */[m
+ [m
+[32m+[m[32mfunc createMigrationsTable(db *sqlx.DB) error {[m
+ 	switch db.DriverName() {[m
+ 	case "postgres":[m
+[31m-		err = db.Get(&tableExists, `[m
+[31m-			SELECT EXISTS ([m
+[31m-				SELECT 1 FROM information_schema.tables [m
+[31m-				WHERE table_name = 'migrations'[m
+[32m+[m		[32m_, err := db.Exec(`[m
+[32m+[m			[32mCREATE TABLE IF NOT EXISTS migrations ([m
+[32m+[m				[32mid INTEGER PRIMARY KEY,[m
+[32m+[m				[32mname TEXT NOT NULL,[m
+[32m+[m				[32mapplied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP[m
+ 			)`)[m
+[32m+[m		[32mreturn err[m
+ 	case "sqlite":[m
+[31m-		err = db.Get(&tableExists, `[m
+[31m-			SELECT EXISTS ([m
+[31m-				SELECT 1 FROM sqlite_master [m
+[31m-				WHERE type='table' AND name='migrations'[m
+[32m+[m		[32m_, err := db.Exec(`[m
+[32m+[m			[32mCREATE TABLE IF NOT EXISTS migrations ([m
+[32m+[m				[32mid INTEGER PRIMARY KEY,[m
+[32m+[m				[32mname TEXT NOT NULL,[m
+[32m+[m				[32mapplied_at DATETIME DEFAULT CURRENT_TIMESTAMP[m
+ 			)`)[m
+[32m+[m		[32mreturn err[m
+ 	default:[m
+[31m-		return fmt.Errorf("unsupported database driver: %s", db.DriverName())[m
+[32m+[m		[32mreturn fmt.Errorf("unsupported db")[m
+ 	}[m
+[31m-[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to check migrations table existence: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	if tableExists {[m
+[31m-		return nil[m
+[31m-	}[m
+[31m-[m
+[31m-	_, err = db.Exec(`[m
+[31m-		CREATE TABLE migrations ([m
+[31m-			id INTEGER PRIMARY KEY,[m
+[31m-			name TEXT NOT NULL,[m
+[31m-			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP[m
+[31m-		)`)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to create migrations table: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	return nil[m
+ }[m
+ [m
+ func getAppliedMigrations(db *sqlx.DB) (map[int]struct{}, error) {[m
+[31m-	applied := make(map[int]struct{})[m
+[31m-	var rows []struct {[m
+[31m-		ID   int    `db:"id"`[m
+[31m-		Name string `db:"name"`[m
+[31m-	}[m
+[31m-[m
+[31m-	err := db.Select(&rows, "SELECT id, name FROM migrations ORDER BY id ASC")[m
+[32m+[m	[32mrows := []struct{ ID int }{}[m
+[32m+[m	[32merr := db.Select(&rows, `SELECT id FROM migrations`)[m
+ 	if err != nil {[m
+[31m-		return nil, fmt.Errorf("failed to query applied migrations: %w", err)[m
+[32m+[m		[32mreturn nil, err[m
+ 	}[m
+[31m-[m
+[31m-	for _, row := range rows {[m
+[31m-		applied[row.ID] = struct{}{}[m
+[32m+[m	[32mout := map[int]struct{}{}[m
+[32m+[m	[32mfor _, r := range rows {[m
+[32m+[m		[32mout[r.ID] = struct{}{}[m
+ 	}[m
+[31m-[m
+[31m-	return applied, nil[m
+[32m+[m	[32mreturn out, nil[m
+ }[m
+ [m
+[31m-func applyMigration(db *sqlx.DB, migration Migration) error {[m
+[32m+[m[32mfunc applyMigration(db *sqlx.DB, m Migration) error {[m
+ 	tx, err := db.Beginx()[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to begin transaction: %w", err)[m
+[31m-	}[m
+[31m-	defer func() {[m
+[31m-		if err != nil {[m
+[31m-			tx.Rollback()[m
+[31m-		}[m
+[31m-	}()[m
+[31m-[m
+[31m-	if migration.ID == 1 {[m
+[31m-		// Handle initial schema creation differently per database[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			err = createTableIfNotExistsSQLite(tx, "users", `[m
+[31m-                CREATE TABLE users ([m
+[31m-                    id TEXT PRIMARY KEY,[m
+[31m-                    name TEXT NOT NULL,[m
+[31m-                    token TEXT NOT NULL,[m
+[31m-                    webhook TEXT NOT NULL DEFAULT '',[m
+[31m-                    jid TEXT NOT NULL DEFAULT '',[m
+[31m-                    qrcode TEXT NOT NULL DEFAULT '',[m
+[31m-                    connected INTEGER,[m
+[31m-                    expiration INTEGER,[m
+[31m-                    events TEXT NOT NULL DEFAULT '',[m
+[31m-                    proxy_url TEXT DEFAULT ''[m
+[31m-                )`)[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 2 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			err = addColumnIfNotExistsSQLite(tx, "users", "proxy_url", "TEXT DEFAULT ''")[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 3 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			err = migrateSQLiteIDToString(tx)[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 4 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			// Handle S3 columns for SQLite[m
+[31m-			err = addColumnIfNotExistsSQLite(tx, "users", "s3_enabled", "BOOLEAN DEFAULT 0")[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_endpoint", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_region", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_bucket", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_access_key", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_secret_key", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_path_style", "BOOLEAN DEFAULT 1")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_public_url", "TEXT DEFAULT ''")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "media_delivery", "TEXT DEFAULT 'base64'")[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "s3_retention_days", "INTEGER DEFAULT 30")[m
+[31m-			}[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 5 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			// Handle message_history table creation for SQLite[m
+[31m-			err = createTableIfNotExistsSQLite(tx, "message_history", `[m
+[31m-				CREATE TABLE message_history ([m
+[31m-					id INTEGER PRIMARY KEY AUTOINCREMENT,[m
+[31m-					user_id TEXT NOT NULL,[m
+[31m-					chat_jid TEXT NOT NULL,[m
+[31m-					sender_jid TEXT NOT NULL,[m
+[31m-					message_id TEXT NOT NULL,[m
+[31m-					timestamp DATETIME NOT NULL,[m
+[31m-					message_type TEXT NOT NULL,[m
+[31m-					text_content TEXT,[m
+[31m-					media_link TEXT,[m
+[31m-					UNIQUE(user_id, message_id)[m
+[31m-				)`)[m
+[31m-			if err == nil {[m
+[31m-				// Create index for SQLite[m
+[31m-				_, err = tx.Exec(`[m
+[31m-					CREATE INDEX IF NOT EXISTS idx_message_history_user_chat_timestamp [m
+[31m-					ON message_history (user_id, chat_jid, timestamp DESC)`)[m
+[31m-			}[m
+[31m-			if err == nil {[m
+[31m-				// Add history column to users table[m
+[31m-				err = addColumnIfNotExistsSQLite(tx, "users", "history", "INTEGER DEFAULT 0")[m
+[31m-			}[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 6 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			// Add quoted_message_id column to message_history table for SQLite[m
+[31m-			err = addColumnIfNotExistsSQLite(tx, "message_history", "quoted_message_id", "TEXT")[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 7 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			// Add hmac_key column as BLOB for encrypted data in SQLite[m
+[31m-			err = addColumnIfNotExistsSQLite(tx, "users", "hmac_key", "BLOB")[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 8 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			// Add dataJson column to message_history table for SQLite[m
+[31m-			err = addColumnIfNotExistsSQLite(tx, "message_history", "datajson", "TEXT")[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else if migration.ID == 9 {[m
+[31m-		if db.DriverName() == "sqlite" {[m
+[31m-			err = nil[m
+[31m-		} else {[m
+[31m-			_, err = tx.Exec(migration.UpSQL)[m
+[31m-		}[m
+[31m-	} else {[m
+[31m-		_, err = tx.Exec(migration.UpSQL)[m
+[31m-	}[m
+[31m-[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to execute migration SQL: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Record the migration[m
+[31m-	if _, err = tx.Exec(`[m
+[31m-        INSERT INTO migrations (id, name) [m
+[31m-        VALUES ($1, $2)`, migration.ID, migration.Name); err != nil {[m
+[31m-		return fmt.Errorf("failed to record migration: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	return tx.Commit()[m
+[31m-}[m
+[31m-[m
+[31m-func createTableIfNotExistsSQLite(tx *sqlx.Tx, tableName, createSQL string) error {[m
+[31m-	var exists int[m
+[31m-	err := tx.Get(&exists, `[m
+[31m-        SELECT COUNT(*) FROM sqlite_master[m
+[31m-        WHERE type='table' AND name=?`, tableName)[m
+ 	if err != nil {[m
+ 		return err[m
+ 	}[m
+ [m
+[31m-	if exists == 0 {[m
+[31m-		_, err = tx.Exec(createSQL)[m
+[31m-		return err[m
+[31m-	}[m
+[31m-	return nil[m
+[31m-}[m
+[31m-func sqliteChangeIDType(tx *sqlx.Tx) error {[m
+[31m-	// SQLite requires a more complex approach:[m
+[31m-	// 1. Create new table with string ID[m
+[31m-	// 2. Copy data with new UUIDs[m
+[31m-	// 3. Drop old table[m
+[31m-	// 4. Rename new table[m
+[31m-[m
+[31m-	// Step 1: Get the current schema[m
+[31m-	var tableInfo string[m
+[31m-	err := tx.Get(&tableInfo, `[m
+[31m-        SELECT sql FROM sqlite_master[m
+[31m-        WHERE type='table' AND name='users'`)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to get table info: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Step 2: Create new table with string ID[m
+[31m-	newTableSQL := strings.Replace(tableInfo,[m
+[31m-		"CREATE TABLE users (",[m
+[31m-		"CREATE TABLE users_new (id TEXT PRIMARY KEY, ", 1)[m
+[31m-	newTableSQL = strings.Replace(newTableSQL,[m
+[31m-		"id INTEGER PRIMARY KEY AUTOINCREMENT,", "", 1)[m
+[31m-[m
+[31m-	if _, err = tx.Exec(newTableSQL); err != nil {[m
+[31m-		return fmt.Errorf("failed to create new table: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Step 3: Copy data with new UUIDs[m
+[31m-	columns, err := getTableColumns(tx, "users")[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to get table columns: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Remove 'id' from columns list[m
+[31m-	var filteredColumns []string[m
+[31m-	for _, col := range columns {[m
+[31m-		if col != "id" {[m
+[31m-			filteredColumns = append(filteredColumns, col)[m
+[31m-		}[m
+[31m-	}[m
+[31m-[m
+[31m-	columnList := strings.Join(filteredColumns, ", ")[m
+[31m-	if _, err = tx.Exec(fmt.Sprintf(`[m
+[31m-        INSERT INTO users_new (id, %s)[m
+[31m-        SELECT gen_random_uuid(), %s FROM users`,[m
+[31m-		columnList, columnList)); err != nil {[m
+[31m-		return fmt.Errorf("failed to copy data: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Step 4: Drop old table[m
+[31m-	if _, err = tx.Exec("DROP TABLE users"); err != nil {[m
+[31m-		return fmt.Errorf("failed to drop old table: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// Step 5: Rename new table[m
+[31m-	if _, err = tx.Exec("ALTER TABLE users_new RENAME TO users"); err != nil {[m
+[31m-		return fmt.Errorf("failed to rename table: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	return nil[m
+[31m-}[m
+[31m-[m
+[31m-func getTableColumns(tx *sqlx.Tx, tableName string) ([]string, error) {[m
+[31m-	var columns []string[m
+[31m-	rows, err := tx.Query(fmt.Sprintf("PRAGMA table_info(%s)", tableName))[m
+[31m-	if err != nil {[m
+[31m-		return nil, fmt.Errorf("failed to get table info: %w", err)[m
+[31m-	}[m
+[31m-	defer rows.Close()[m
+[31m-[m
+[31m-	for rows.Next() {[m
+[31m-		var cid int[m
+[31m-		var name, typ string[m
+[31m-		var notnull int[m
+[31m-		var dfltValue interface{}[m
+[31m-		var pk int[m
+[31m-[m
+[31m-		if err := rows.Scan(&cid, &name, &typ, &notnull, &dfltValue, &pk); err != nil {[m
+[31m-			return nil, fmt.Errorf("failed to scan column info: %w", err)[m
+[31m-		}[m
+[31m-		columns = append(columns, name)[m
+[31m-	}[m
+[31m-[m
+[31m-	return columns, nil[m
+[31m-}[m
+[31m-[m
+[31m-func migrateSQLiteIDToString(tx *sqlx.Tx) error {[m
+[31m-	// 1. Check if we need to do the migration[m
+[31m-	var currentType string[m
+[31m-	err := tx.QueryRow(`[m
+[31m-        SELECT type FROM pragma_table_info('users')[m
+[31m-        WHERE name = 'id'`).Scan(&currentType)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to check column type: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	if currentType != "INTEGER" {[m
+[31m-		// No migration needed[m
+[31m-		return nil[m
+[32m+[m	[32msql := strings.TrimSpace(upSQLFor(db, m))[m
+[32m+[m	[32mif sql != "" {[m
+[32m+[m		[32m_, err = tx.Exec(sql)[m
+ 	}[m
+[31m-[m
+[31m-	// 2. Create new table with string ID[m
+[31m-	_, err = tx.Exec(`[m
+[31m-        CREATE TABLE users_new ([m
+[31m-            id TEXT PRIMARY KEY,[m
+[31m-            name TEXT NOT NULL,[m
+[31m-            token TEXT NOT NULL,[m
+[31m-            webhook TEXT NOT NULL DEFAULT '',[m
+[31m-            jid TEXT NOT NULL DEFAULT '',[m
+[31m-            qrcode TEXT NOT NULL DEFAULT '',[m
+[31m-            connected INTEGER,[m
+[31m-            expiration INTEGER,[m
+[31m-            events TEXT NOT NULL DEFAULT '',[m
+[31m-            proxy_url TEXT DEFAULT ''[m
+[31m-        )`)[m
+ 	if err != nil {[m
+[31m-		return fmt.Errorf("failed to create new table: %w", err)[m
+[31m-	}[m
+[31m-[m
+[31m-	// 3. Copy data with new UUIDs[m
+[31m-	_, err = tx.Exec(`[m
+[31m-        INSERT INTO users_new[m
+[31m-        SELECT[m
+[31m-            hex(randomblob(16)),[m
+[31m-            name, token, webhook, jid, qrcode,[m
+[31m-            connected, expiration, events, proxy_url [m
+[31m-        FROM users`)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to copy data: %w", err)[m
+[32m+[m		[32m_ = tx.Rollback()[m
+[32m+[m		[32mreturn err[m
+ 	}[m
+ [m
+[31m-	// 4. Drop old table[m
+[31m-	_, err = tx.Exec(`DROP TABLE users`)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to drop old table: %w", err)[m
+[32m+[m	[32mif db.DriverName() == "sqlite" {[m
+[32m+[m		[32m_, err = tx.Exec(`INSERT INTO migrations (id, name) VALUES (?, ?)`, m.ID, m.Name)[m
+[32m+[m	[32m} else {[m
+[32m+[m		[32m_, err = tx.Exec(`INSERT INTO migrations (id, name) VALUES ($1, $2)`, m.ID, m.Name)[m
+ 	}[m
+ [m
+[31m-	// 5. Rename new table[m
+[31m-	_, err = tx.Exec(`ALTER TABLE users_new RENAME TO users`)[m
+ 	if err != nil {[m
+[31m-		return fmt.Errorf("failed to rename table: %w", err)[m
+[32m+[m		[32m_ = tx.Rollback()[m
+[32m+[m		[32mreturn err[m
+ 	}[m
+ [m
+[31m-	return nil[m
+[32m+[m	[32mreturn tx.Commit()[m
+ }[m
+ [m
+[31m-func addColumnIfNotExistsSQLite(tx *sqlx.Tx, tableName, columnName, columnDef string) error {[m
+[31m-	var exists int[m
+[31m-	err := tx.Get(&exists, `[m
+[31m-        SELECT COUNT(*) FROM pragma_table_info(?)[m
+[31m-        WHERE name = ?`, tableName, columnName)[m
+[31m-	if err != nil {[m
+[31m-		return fmt.Errorf("failed to check column existence: %w", err)[m
+[31m-	}[m
+[32m+[m[32m/* ===================== UTIL ===================== */[m
+ [m
+[31m-	if exists == 0 {[m
+[31m-		_, err = tx.Exec(fmt.Sprintf([m
+[31m-			"ALTER TABLE %s ADD COLUMN %s %s",[m
+[31m-			tableName, columnName, columnDef))[m
+[31m-		if err != nil {[m
+[31m-			return fmt.Errorf("failed to add column: %w", err)[m
+[31m-		}[m
+[32m+[m[32mfunc GenerateRandomID() (string, error) {[m
+[32m+[m	[32mb := make([]byte, 16)[m
+[32m+[m	[32mif _, err := rand.Read(b); err != nil {[m
+[32m+[m		[32mreturn "", err[m
+ 	}[m
+[31m-	return nil[m
+[32m+[m	[32mreturn hex.EncodeToString(b), nil[m
+ }[m
+[31m-[m
+[31m-const addHmacKeySQL = `[m
+[31m--- PostgreSQL version - Add encrypted HMAC key column[m
+[31m-DO $$[m
+[31m-BEGIN[m
+[31m-    -- Add hmac_key column as BYTEA for encrypted data[m
+[31m-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'hmac_key') THEN[m
+[31m-        ALTER TABLE users ADD COLUMN hmac_key BYTEA;[m
+[31m-    END IF;[m
+[31m-END $$;[m
+[31m-[m
+[31m--- SQLite version (handled in code)[m
+[31m-`[m
+[1mdiff --git a/s3manager.go b/s3manager.go[m
+[1mindex 77c71e9..ba5bd50 100644[m
+[1m--- a/s3manager.go[m
+[1m+++ b/s3manager.go[m
+[36m@@ -9,7 +9,6 @@[m [mimport ([m
+ 	"time"[m
+ [m
+ 	"github.com/aws/aws-sdk-go-v2/aws"[m
+[31m-	"github.com/jmoiron/sqlx"[m
+ 	"github.com/aws/aws-sdk-go-v2/credentials"[m
+ 	"github.com/aws/aws-sdk-go-v2/service/s3"[m
+ 	"github.com/aws/aws-sdk-go-v2/service/s3/types"[m
+[36m@@ -33,7 +32,6 @@[m [mtype S3Config struct {[m
+ // S3Manager manages S3 operations[m
+ type S3Manager struct {[m
+ 	mu      sync.RWMutex[m
+[31m-	db      *sqlx.DB[m
+ 	clients map[string]*s3.Client[m
+ 	configs map[string]*S3Config[m
+ }[m
+[36m@@ -49,56 +47,6 @@[m [mfunc GetS3Manager() *S3Manager {[m
+ 	return s3Manager[m
+ }[m
+ [m
+[31m-// SetDB sets the database reference for lazy S3 client initialization[m
+[31m-func (m *S3Manager) SetDB(db *sqlx.DB) {[m
+[31m-	m.mu.Lock()[m
+[31m-	defer m.mu.Unlock()[m
+[31m-	m.db = db[m
+[31m-}[m
+[31m-[m
+[31m-// EnsureClientFromDB loads S3 config from DB and initializes client if enabled. Returns true if client is available.[m
+[31m-func (m *S3Manager) EnsureClientFromDB(userID string) bool {[m
+[31m-	if _, _, ok := m.GetClient(userID); ok {[m
+[31m-		return true[m
+[31m-	}[m
+[31m-	m.mu.RLock()[m
+[31m-	db := m.db[m
+[31m-	m.mu.RUnlock()[m
+[31m-	if db == nil {[m
+[31m-		return false[m
+[31m-	}[m
+[31m-	var s3DbConfig struct {[m
+[31m-		Enabled       bool   `db:"s3_enabled"`[m
+[31m-		Endpoint      string `db:"s3_endpoint"`[m
+[31m-		Region        string `db:"s3_region"`[m
+[31m-		Bucket        string `db:"s3_bucket"`[m
+[31m-		AccessKey     string `db:"s3_access_key"`[m
+[31m-		SecretKey     string `db:"s3_secret_key"`[m
+[31m-		PathStyle     bool   `db:"s3_path_style"`[m
+[31m-		PublicURL     string `db:"s3_public_url"`[m
+[31m-		MediaDelivery string `db:"media_delivery"`[m
+[31m-		RetentionDays int    `db:"s3_retention_days"`[m
+[31m-	}[m
+[31m-	query := `SELECT s3_enabled, s3_endpoint, s3_region, s3_bucket, s3_access_key, s3_secret_key, s3_path_style, s3_public_url, COALESCE(media_delivery, 'base64') AS media_delivery, COALESCE(s3_retention_days, 30) AS s3_retention_days FROM users WHERE id = $1`[m
+[31m-	query = db.Rebind(query)[m
+[31m-	if err := db.Get(&s3DbConfig, query, userID); err != nil || !s3DbConfig.Enabled {[m
+[31m-		return false[m
+[31m-	}[m
+[31m-	config := &S3Config{[m
+[31m-		Enabled:       s3DbConfig.Enabled,[m
+[31m-		Endpoint:      s3DbConfig.Endpoint,[m
+[31m-		Region:        s3DbConfig.Region,[m
+[31m-		Bucket:        s3DbConfig.Bucket,[m
+[31m-		AccessKey:     s3DbConfig.AccessKey,[m
+[31m-		SecretKey:     s3DbConfig.SecretKey,[m
+[31m-		PathStyle:     s3DbConfig.PathStyle,[m
+[31m-		PublicURL:     s3DbConfig.PublicURL,[m
+[31m-		MediaDelivery: s3DbConfig.MediaDelivery,[m
+[31m-		RetentionDays: s3DbConfig.RetentionDays,[m
+[31m-	}[m
+[31m-	return m.InitializeS3Client(userID, config) == nil[m
+[31m-}[m
+[31m-[m
+ // InitializeS3Client creates or updates S3 client for a user[m
+ func (m *S3Manager) InitializeS3Client(userID string, config *S3Config) error {[m
+ 	if !config.Enabled {[m
+[36m@@ -244,13 +192,7 @@[m [mfunc (m *S3Manager) GenerateS3Key(userID, contactJID, messageID string, mimeType[m
+ func (m *S3Manager) UploadToS3(ctx context.Context, userID string, key string, data []byte, mimeType string) error {[m
+ 	client, config, ok := m.GetClient(userID)[m
+ 	if !ok {[m
+[31m-		// Try lazy init from DB if available (handles reconnect-after-restart)[m
+[31m-		if m.EnsureClientFromDB(userID) {[m
+[31m-			client, config, ok = m.GetClient(userID)[m
+[31m-		}[m
+[31m-		if !ok {[m
+[31m-			return fmt.Errorf("S3 client not initialized for user %s", userID)[m
+[31m-		}[m
+[32m+[m		[32mreturn fmt.Errorf("S3 client not initialized for user %s", userID)[m
+ 	}[m
+ [m
+ 	// Set content type and cache headers for preview[m
+[1mdiff --git a/static/api/spec.yml b/static/api/spec.yml[m
+[1mindex c43a6c4..8ab7095 100644[m
+[1m--- a/static/api/spec.yml[m
+[1m+++ b/static/api/spec.yml[m
+[36m@@ -2010,18 +2010,6 @@[m [mdefinitions:[m
+         example:[m
+           ["5491155553935@s.whatsapp.net", "5491155553936@s.whatsapp.net"][m
+         description: "Array of JIDs to mention in the message. Use full WhatsApp JID format (number@s.whatsapp.net)."[m
+[31m-  QuotedMessageExtendedText:[m
+[31m-    type: object[m
+[31m-    properties:[m
+[31m-      text:[m
+[31m-        type: string[m
+[31m-        example: "Original message text"[m
+[31m-  QuotedMessage:[m
+[31m-    type: object[m
+[31m-    description: "Optional quoted message payload for custom reply preview using extendedTextMessage."[m
+[31m-    properties:[m
+[31m-      extendedTextMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessageExtendedText"[m
+   User:[m
+     type: object[m
+     properties:[m
+[36m@@ -2309,8 +2297,6 @@[m [mdefinitions:[m
+         example: "BEGIN:VCARD\nVERSION:3.0\nN:Doe;John;;;\nFN:John Doe\nORG:Example.com Inc.;\nTITLE:Imaginary test person\nEMAIL;type=INTERNET;type=WORK;type=pref:johnDoe@example.org\nTEL;type=WORK;type=pref:+1 617 555 1212\nTEL;type=WORK:+1 (617) 555-1234\nTEL;type=CELL:+1 781 555 1212\nTEL;type=HOME:+1 202 555 1212\nitem1.ADR;type=WORK:;;2 Enterprise Avenue;Worktown;NY;01111;USA\nitem1.X-ABADR:us\nitem2.ADR;type=HOME;type=pref:;;3 Acacia Avenue;Hoitem2.X-ABADR:us\nEND:VCARD"[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+ [m
+ [m
+   MessageLocation:[m
+[36m@@ -2337,8 +2323,6 @@[m [mdefinitions:[m
+         example: 2.294481[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   ReactionText:[m
+     type: object[m
+     required: [m
+[36m@@ -2471,8 +2455,6 @@[m [mdefinitions:[m
+         type: string[m
+         description: "Text content of the message being replied to (for displaying quote preview)"[m
+         example: "Original message text"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageImage:[m
+     type: object[m
+     required: [m
+[36m@@ -2493,8 +2475,6 @@[m [mdefinitions:[m
+         example: "ABCDABCD1234"[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageAudio:[m
+     type: object[m
+     required:[m
+[36m@@ -2528,8 +2508,6 @@[m [mdefinitions:[m
+         example: [0, 0, 0, 12, 20, 20, 22, 10, 5, 0, 0, 0][m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageVideo:[m
+     type: object[m
+     required: [m
+[36m@@ -2553,8 +2531,6 @@[m [mdefinitions:[m
+         example: "AA00D010"[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageSticker:[m
+     type: object[m
+     required: [m
+[36m@@ -2593,8 +2569,6 @@[m [mdefinitions:[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+         description: "Optional context info for replies, mentions, and forwarding"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageDocument:[m
+     type: object[m
+     required: [m
+[36m@@ -2616,8 +2590,6 @@[m [mdefinitions:[m
+         example: "ABCDABCD1234"[m
+       ContextInfo:[m
+         $ref: "#/definitions/ContextInfo"[m
+[31m-      QuotedMessage:[m
+[31m-        $ref: "#/definitions/QuotedMessage"[m
+   MessageTemplate:[m
+     type: object[m
+     required: [m
+[1mdiff --git a/wmiau.go b/wmiau.go[m
+[1mindex 302c2dd..c8d41af 100644[m
+[1m--- a/wmiau.go[m
+[1m+++ b/wmiau.go[m
+[36m@@ -43,9 +43,39 @@[m [mtype MyClient struct {[m
+ 	s              *server[m
+ }[m
+ [m
+[31m-// ensureS3ClientForUser loads S3 config from DB and initializes client if not already present (lazy init for reconnect-after-restart)[m
+[31m-func ensureS3ClientForUser(userID string) {[m
+[31m-	GetS3Manager().EnsureClientFromDB(userID)[m
+[32m+[m[32mfunc downloadWithRetry([m
+[32m+[m	[32mctx context.Context,[m
+[32m+[m	[32mcli *whatsmeow.Client,[m
+[32m+[m	[32mmedia whatsmeow.DownloadableMessage,[m
+[32m+[m[32m) ([]byte, error) {[m
+[32m+[m
+[32m+[m	[32mvar lastErr error[m
+[32m+[m	[32mdelays := []time.Duration{[m
+[32m+[m		[32m2 * time.Second,[m
+[32m+[m		[32m5 * time.Second,[m
+[32m+[m		[32m10 * time.Second,[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mfor i, d := range delays {[m
+[32m+[m		[32mdata, err := cli.Download(ctx, media)[m
+[32m+[m		[32mif err == nil {[m
+[32m+[m			[32mif i > 0 {[m
+[32m+[m				[32mlog.Warn().Int("attempt", i+1).Msg("Media download succeeded after retry")[m
+[32m+[m			[32m}[m
+[32m+[m			[32mreturn data, nil[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mlastErr = err[m
+[32m+[m		[32mlog.Warn().[m
+[32m+[m			[32mErr(err).[m
+[32m+[m			[32mInt("attempt", i+1).[m
+[32m+[m			[32mDur("retry_in", d).[m
+[32m+[m			[32mMsg("Failed to download media, retrying")[m
+[32m+[m
+[32m+[m		[32mtime.Sleep(d)[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m	[32mreturn nil, lastErr[m
+ }[m
+ [m
+ func sendToGlobalWebHook(jsonData []byte, token string, userID string) {[m
+[36m@@ -300,7 +330,49 @@[m [mfunc (s *server) connectOnStartup() {[m
+ [m
+ 			// Initialize S3 client if configured[m
+ 			go func(userID string) {[m
+[31m-				GetS3Manager().EnsureClientFromDB(userID)[m
+[32m+[m				[32mvar s3Config struct {[m
+[32m+[m					[32mEnabled       bool   `db:"s3_enabled"`[m
+[32m+[m					[32mEndpoint      string `db:"s3_endpoint"`[m
+[32m+[m					[32mRegion        string `db:"s3_region"`[m
+[32m+[m					[32mBucket        string `db:"s3_bucket"`[m
+[32m+[m					[32mAccessKey     string `db:"s3_access_key"`[m
+[32m+[m					[32mSecretKey     string `db:"s3_secret_key"`[m
+[32m+[m					[32mPathStyle     bool   `db:"s3_path_style"`[m
+[32m+[m					[32mPublicURL     string `db:"s3_public_url"`[m
+[32m+[m					[32mRetentionDays int    `db:"s3_retention_days"`[m
+[32m+[m				[32m}[m
+[32m+[m
+[32m+[m				[32merr := s.db.Get(&s3Config, `[m
+[32m+[m					[32mSELECT s3_enabled, s3_endpoint, s3_region, s3_bucket,[m[41m [m
+[32m+[m						[32m   s3_access_key, s3_secret_key, s3_path_style,[m[41m [m
+[32m+[m						[32m   s3_public_url, s3_retention_days[m
+[32m+[m					[32mFROM users WHERE id = $1`, userID)[m
+[32m+[m
+[32m+[m				[32mif err != nil {[m
+[32m+[m					[32mlog.Error().Err(err).Str("userID", userID).Msg("Failed to get S3 config")[m
+[32m+[m					[32mreturn[m
+[32m+[m				[32m}[m
+[32m+[m
+[32m+[m				[32mif s3Config.Enabled {[m
+[32m+[m					[32mconfig := &S3Config{[m
+[32m+[m						[32mEnabled:       s3Config.Enabled,[m
+[32m+[m						[32mEndpoint:      s3Config.Endpoint,[m
+[32m+[m						[32mRegion:        s3Config.Region,[m
+[32m+[m						[32mBucket:        s3Config.Bucket,[m
+[32m+[m						[32mAccessKey:     s3Config.AccessKey,[m
+[32m+[m						[32mSecretKey:     s3Config.SecretKey,[m
+[32m+[m						[32mPathStyle:     s3Config.PathStyle,[m
+[32m+[m						[32mPublicURL:     s3Config.PublicURL,[m
+[32m+[m						[32mRetentionDays: s3Config.RetentionDays,[m
+[32m+[m					[32m}[m
+[32m+[m
+[32m+[m					[32merr = GetS3Manager().InitializeS3Client(userID, config)[m
+[32m+[m					[32mif err != nil {[m
+[32m+[m						[32mlog.Error().Err(err).Str("userID", userID).Msg("Failed to initialize S3 client on startup")[m
+[32m+[m					[32m} else {[m
+[32m+[m						[32mlog.Info().Str("userID", userID).Msg("S3 client initialized on startup")[m
+[32m+[m					[32m}[m
+[32m+[m				[32m}[m
+ 			}(txtid)[m
+ 		}[m
+ 	}[m
+[36m@@ -329,64 +401,6 @@[m [mfunc parseJID(arg string) (types.JID, bool) {[m
+ 	}[m
+ }[m
+ [m
+[31m-// getPlatformTypeEnum converts a platform type string to the corresponding DeviceProps enum[m
+[31m-// Returns DESKTOP as default if the string doesn't match any known type[m
+[31m-func getPlatformTypeEnum(platformType string) *waCompanionReg.DeviceProps_PlatformType {[m
+[31m-	platformType = strings.ToUpper(strings.TrimSpace(platformType))[m
+[31m-	[m
+[31m-	switch platformType {[m
+[31m-	case "UNKNOWN":[m
+[31m-		return waCompanionReg.DeviceProps_UNKNOWN.Enum()[m
+[31m-	case "CHROME":[m
+[31m-		return waCompanionReg.DeviceProps_CHROME.Enum()[m
+[31m-	case "FIREFOX":[m
+[31m-		return waCompanionReg.DeviceProps_FIREFOX.Enum()[m
+[31m-	case "IE":[m
+[31m-		return waCompanionReg.DeviceProps_IE.Enum()[m
+[31m-	case "OPERA":[m
+[31m-		return waCompanionReg.DeviceProps_OPERA.Enum()[m
+[31m-	case "SAFARI":[m
+[31m-		return waCompanionReg.DeviceProps_SAFARI.Enum()[m
+[31m-	case "EDGE":[m
+[31m-		return waCompanionReg.DeviceProps_EDGE.Enum()[m
+[31m-	case "DESKTOP":[m
+[31m-		return waCompanionReg.DeviceProps_DESKTOP.Enum()[m
+[31m-	case "IPAD":[m
+[31m-		return waCompanionReg.DeviceProps_IPAD.Enum()[m
+[31m-	case "ANDROID_TABLET":[m
+[31m-		return waCompanionReg.DeviceProps_ANDROID_TABLET.Enum()[m
+[31m-	case "OHANA":[m
+[31m-		return waCompanionReg.DeviceProps_OHANA.Enum()[m
+[31m-	case "ALOHA":[m
+[31m-		return waCompanionReg.DeviceProps_ALOHA.Enum()[m
+[31m-	case "CATALINA":[m
+[31m-		return waCompanionReg.DeviceProps_CATALINA.Enum()[m
+[31m-	case "TCL_TV":[m
+[31m-		return waCompanionReg.DeviceProps_TCL_TV.Enum()[m
+[31m-	case "IOS_PHONE":[m
+[31m-		return waCompanionReg.DeviceProps_IOS_PHONE.Enum()[m
+[31m-	case "IOS_CATALYST":[m
+[31m-		return waCompanionReg.DeviceProps_IOS_CATALYST.Enum()[m
+[31m-	case "ANDROID_PHONE":[m
+[31m-		return waCompanionReg.DeviceProps_ANDROID_PHONE.Enum()[m
+[31m-	case "ANDROID_AMBIGUOUS":[m
+[31m-		return waCompanionReg.DeviceProps_ANDROID_AMBIGUOUS.Enum()[m
+[31m-	case "WEAR_OS":[m
+[31m-		return waCompanionReg.DeviceProps_WEAR_OS.Enum()[m
+[31m-	case "AR_WRIST":[m
+[31m-		return waCompanionReg.DeviceProps_AR_WRIST.Enum()[m
+[31m-	case "AR_DEVICE":[m
+[31m-		return waCompanionReg.DeviceProps_AR_DEVICE.Enum()[m
+[31m-	case "UWP":[m
+[31m-		return waCompanionReg.DeviceProps_UWP.Enum()[m
+[31m-	case "VR":[m
+[31m-		return waCompanionReg.DeviceProps_VR.Enum()[m
+[31m-	default:[m
+[31m-		log.Warn().Str("platformType", platformType).Msg("Unknown platform type, defaulting to DESKTOP")[m
+[31m-		return waCompanionReg.DeviceProps_DESKTOP.Enum()[m
+[31m-	}[m
+[31m-}[m
+[31m-[m
+ func (s *server) startClient(userID string, textjid string, token string, subscriptions []string) {[m
+ 	log.Info().Str("userid", userID).Str("jid", textjid).Msg("Starting websocket connection to Whatsapp")[m
+ [m
+[36m@@ -428,7 +442,7 @@[m [mfunc (s *server) startClient(userID string, textjid string, token string, subscr[m
+ 	// Now we can use the client with the manager[m
+ 	clientManager.SetWhatsmeowClient(userID, client)[m
+ [m
+[31m-	store.DeviceProps.PlatformType = getPlatformTypeEnum(*platformType)[m
+[32m+[m	[32mstore.DeviceProps.PlatformType = waCompanionReg.DeviceProps_DESKTOP.Enum()[m
+ 	store.DeviceProps.Os = osName[m
+ [m
+ 	mycli := MyClient{client, 1, userID, token, subscriptions, s.db, s}[m
+[36m@@ -482,9 +496,6 @@[m [mfunc (s *server) startClient(userID string, textjid string, token string, subscr[m
+ 	}[m
+ 	clientManager.SetHTTPClient(userID, httpClient)[m
+ [m
+[31m-	// Initialize S3 client if configured (needed when user reconnects after container restart - connectOnStartup only runs for connected=1)[m
+[31m-	GetS3Manager().EnsureClientFromDB(userID)[m
+[31m-[m
+ 	if client.Store.ID == nil {[m
+ 		// No ID stored, new login[m
+ 		qrChan, err := client.GetQRChannel(context.Background())[m
+[36m@@ -821,13 +832,29 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 		log.Info().Msg("Received StreamReplaced event")[m
+ 		return[m
+ 	case *events.Message:[m
+[32m+[m		[32m// --- NORMALIZA LID -> PHONE JID NO EVENTO ENVIADO PRO WEBHOOK ---[m
+[32m+[m		[32mfixed := *evt // shallow copy[m
+[32m+[m
+[32m+[m		[32msenderStr := resolveLIDToPhoneJIDNoCtx(mycli.db, fixed.Info.Sender.String())[m
+[32m+[m		[32mchatStr := resolveLIDToPhoneJIDNoCtx(mycli.db, fixed.Info.Chat.String())[m
+[32m+[m
+[32m+[m		[32mif sj, err := types.ParseJID(senderStr); err == nil {[m
+[32m+[m			[32mfixed.Info.Sender = sj[m
+[32m+[m		[32m}[m
+[32m+[m		[32mif cj, err := types.ParseJID(chatStr); err == nil {[m
+[32m+[m			[32mfixed.Info.Chat = cj[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32m// IMPORTANTE: sobrescreve o evento do webhook[m
+[32m+[m		[32mpostmap["event"] = &fixed[m
+ [m
+ 		var s3Config struct {[m
+ 			Enabled       string `db:"s3_enabled"`[m
+ 			MediaDelivery string `db:"media_delivery"`[m
+ 		}[m
+ [m
+[31m-		lastMessageCache.Set(mycli.userID, &evt.Info, cache.DefaultExpiration)[m
+[32m+[m		[32m// (opcional, mas recomendado) cache com o JID já normalizado[m
+[32m+[m		[32mlastMessageCache.Set(mycli.userID, &fixed.Info, cache.DefaultExpiration)[m
+ 		myuserinfo, found := userinfocache.Get(mycli.token)[m
+ 		if !found {[m
+ 			err := mycli.db.Get(&s3Config, "SELECT CASE WHEN s3_enabled = 1 THEN 'true' ELSE 'false' END AS s3_enabled, media_delivery FROM users WHERE id = $1", txtid)[m
+[36m@@ -841,11 +868,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 			s3Config.MediaDelivery = myuserinfo.(Values).Get("MediaDelivery")[m
+ 		}[m
+ [m
+[31m-		// Lazy init S3 client if needed (handles reconnect-after-restart when connectOnStartup skipped this user)[m
+[31m-		if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-			ensureS3ClientForUser(txtid)[m
+[31m-		}[m
+[31m-[m
+ 		postmap["type"] = "Message"[m
+ 		dowebhook = 1[m
+ 		metaParts := []string{fmt.Sprintf("pushname: %s", evt.Info.PushName), fmt.Sprintf("timestamp: %s", evt.Info.Timestamp)}[m
+[36m@@ -877,9 +899,13 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 				}[m
+ [m
+ 				// Download the image[m
+[31m-				data, err := mycli.WAClient.Download(context.Background(), img)[m
+[32m+[m				[32m//data, err := mycli.WAClient.Download(context.Background(), img)[m
+[32m+[m				[32mdata, err := downloadWithRetry(context.Background(), mycli.WAClient, img)[m
+ 				if err != nil {[m
+[31m-					log.Error().Err(err).Msg("Failed to download image")[m
+[32m+[m					[32mlog.Error().[m
+[32m+[m						[32mErr(err).[m
+[32m+[m						[32mStr("messageID", evt.Info.ID).[m
+[32m+[m						[32mMsg("Media download failed after retries")[m
+ 					return[m
+ 				}[m
+ [m
+[36m@@ -893,15 +919,13 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 					log.Error().Err(err).Msg("Failed to save image to temporary file")[m
+ 					return[m
+ 				}[m
+[31m-[m
+ 				// Process S3 upload if enabled[m
+ 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-					ensureS3ClientForUser(txtid)[m
+[31m-					// Get sender JID for inbox/outbox determination[m
+[31m-					isIncoming := evt.Info.IsFromMe == false[m
+[31m-					contactJID := evt.Info.Sender.String()[m
+[31m-					if evt.Info.IsGroup {[m
+[31m-						contactJID = evt.Info.Chat.String()[m
+[32m+[m					[32m// Get sender JID for inbox/outbox determination (NORMALIZADO)[m
+[32m+[m					[32misIncoming := fixed.Info.IsFromMe == false[m
+[32m+[m					[32mcontactJID := fixed.Info.Sender.String()[m
+[32m+[m					[32mif fixed.Info.IsGroup {[m
+[32m+[m						[32mcontactJID = fixed.Info.Chat.String()[m
+ 					}[m
+ [m
+ 					// Process S3 upload[m
+[36m@@ -909,7 +933,7 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 						context.Background(),[m
+ 						txtid,[m
+ 						contactJID,[m
+[31m-						evt.Info.ID,[m
+[32m+[m						[32mfixed.Info.ID,[m
+ 						data,[m
+ 						img.GetMimetype(),[m
+ 						filepath.Base(tmpPath),[m
+[36m@@ -921,7 +945,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 						postmap["s3"] = s3Data[m
+ 					}[m
+ 				}[m
+[31m-[m
+ 				// Convert the image to base64 if needed[m
+ 				if s3Config.MediaDelivery == "base64" || s3Config.MediaDelivery == "both" {[m
+ 					base64String, mimeType, err := fileToBase64(tmpPath)[m
+[36m@@ -985,7 +1008,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ [m
+ 				// Process S3 upload if enabled[m
+ 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-					ensureS3ClientForUser(txtid)[m
+ 					// Get sender JID for inbox/outbox determination[m
+ 					isIncoming := evt.Info.IsFromMe == false[m
+ 					contactJID := evt.Info.Sender.String()[m
+[36m@@ -1036,7 +1058,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 					log.Info().Str("path", tmpPath).Msg("Temporary file deleted")[m
+ 				}[m
+ 			}[m
+[31m-[m
+ 			// try to get Document if any[m
+ 			document := evt.Message.GetDocumentMessage()[m
+ 			if document != nil {[m
+[36m@@ -1049,9 +1070,34 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 				}[m
+ [m
+ 				// Download the document[m
+[31m-				data, err := mycli.WAClient.Download(context.Background(), document)[m
+[32m+[m				[32mctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)[m
+[32m+[m				[32mdefer cancel()[m
+[32m+[m
+[32m+[m				[32mdata, err := mycli.WAClient.Download(ctx, document)[m
+[32m+[m				[32mif err != nil && strings.Contains(err.Error(), "status code 403") {[m
+[32m+[m					[32m// fallback: força usar DirectPath (evita URL mmg com ?ccb=...)[m
+[32m+[m					[32mdocCopy := *document // cópia por valor da struct[m
+[32m+[m
+[32m+[m					[32m// se DirectPath estiver vazio, tenta extrair do URL[m
+[32m+[m					[32mif (docCopy.DirectPath == nil || docCopy.GetDirectPath() == "") && docCopy.GetURL() != "" {[m
+[32m+[m						[32mif u, perr := url.Parse(docCopy.GetURL()); perr == nil && u.Path != "" {[m
+[32m+[m							[32mdp := u.Path[m
+[32m+[m							[32mdocCopy.DirectPath = &dp[m
+[32m+[m						[32m}[m
+[32m+[m					[32m}[m
+[32m+[m
+[32m+[m					[32m// zera a URL pra não insistir no link mmg direto[m
+[32m+[m					[32mdocCopy.URL = nil[m
+[32m+[m
+[32m+[m					[32mdata, err = mycli.WAClient.Download(ctx, &docCopy)[m
+[32m+[m				[32m}[m
+[32m+[m
+ 				if err != nil {[m
+[31m-					log.Error().Err(err).Msg("Failed to download document")[m
+[32m+[m					[32mlog.Error().[m
+[32m+[m						[32mErr(err).[m
+[32m+[m						[32mStr("url", document.GetURL()).[m
+[32m+[m						[32mStr("directPath", document.GetDirectPath()).[m
+[32m+[m						[32mMsg("Failed to download document (after fallback)")[m
+ 					return[m
+ 				}[m
+ [m
+[36m@@ -1065,7 +1111,7 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 					if filename != nil {[m
+ 						extension = filepath.Ext(*filename)[m
+ 					} else {[m
+[31m-						extension = ".bin" // Default extension if no filename or MIME type is available[m
+[32m+[m						[32mextension = ".bin"[m
+ 					}[m
+ 				}[m
+ 				tmpPath := filepath.Join(tmpDirectory, evt.Info.ID+extension)[m
+[36m@@ -1079,7 +1125,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ [m
+ 				// Process S3 upload if enabled[m
+ 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-					ensureS3ClientForUser(txtid)[m
+ 					// Get sender JID for inbox/outbox determination[m
+ 					isIncoming := evt.Info.IsFromMe == false[m
+ 					contactJID := evt.Info.Sender.String()[m
+[36m@@ -1162,7 +1207,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ [m
+ 				// Process S3 upload if enabled[m
+ 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-					ensureS3ClientForUser(txtid)[m
+ 					// Get sender JID for inbox/outbox determination[m
+ 					isIncoming := evt.Info.IsFromMe == false[m
+ 					contactJID := evt.Info.Sender.String()[m
+[36m@@ -1213,7 +1257,6 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 					log.Info().Str("path", tmpPath).Msg("Temporary file deleted")[m
+ 				}[m
+ 			}[m
+[31m-[m
+ 			sticker := evt.Message.GetStickerMessage()[m
+ 			if sticker != nil {[m
+ 				tmpDirectory := filepath.Join("/tmp", "user_"+txtid)[m
+[36m@@ -1223,11 +1266,45 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 					return[m
+ 				}[m
+ [m
+[31m-				// download the sticker using the DownloadableMessage interface[m
+[31m-				data, err := mycli.WAClient.Download(context.Background(), sticker)[m
+[32m+[m				[32mctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)[m
+[32m+[m				[32mdefer cancel()[m
+[32m+[m
+[32m+[m				[32m// DEBUG que mata a charada: url/directpath/auth[m
+[32m+[m				[32mstURL := sticker.GetURL()[m
+[32m+[m				[32mstDP := sticker.GetDirectPath()[m
+[32m+[m
+[32m+[m				[32mlog.Debug().[m
+[32m+[m					[32mStr("sticker_url", stURL).[m
+[32m+[m					[32mStr("sticker_direct_path", stDP).[m
+[32m+[m					[32mBool("directpath_has_auth", strings.Contains(stDP, "auth=")).[m
+[32m+[m					[32mInt("media_key_len", len(sticker.GetMediaKey())).[m
+[32m+[m					[32mMsg("Sticker download debug")[m
+[32m+[m
+[32m+[m				[32m// 1) tentativa normal[m
+[32m+[m				[32mdata, err := mycli.WAClient.Download(ctx, sticker)[m
+[32m+[m
+[32m+[m				[32m// 2) fallback: se falhar (principalmente 403), força DirectPath[m
+ 				if err != nil {[m
+[31m-					log.Error().Err(err).Msg("Failed to download sticker")[m
+[31m-					return[m
+[32m+[m					[32merrStr := err.Error()[m
+[32m+[m					[32mif strings.Contains(errStr, "status code 403") || strings.Contains(errStr, "403") {[m
+[32m+[m						[32m// faz uma cópia e zera a URL pra não tentar baixar por URL ruim[m
+[32m+[m						[32mst2 := *sticker[m
+[32m+[m						[32mempty := ""[m
+[32m+[m						[32mst2.URL = &empty // força cair no DirectPath[m
+[32m+[m
+[32m+[m						[32m// retry curtinho (porque mediaConn/auth às vezes “vira”)[m
+[32m+[m						[32mfor i := 0; i < 2; i++ {[m
+[32m+[m							[32mtime.Sleep(time.Duration(250*(i+1)) * time.Millisecond)[m
+[32m+[m							[32mdata, err = mycli.WAClient.Download(ctx, &st2)[m
+[32m+[m							[32mif err == nil {[m
+[32m+[m								[32mbreak[m
+[32m+[m							[32m}[m
+[32m+[m						[32m}[m
+[32m+[m					[32m}[m
+[32m+[m					[32mif err != nil {[m
+[32m+[m						[32mlog.Error().Err(err).Msg("Failed to download sticker (after fallback)")[m
+[32m+[m						[32mreturn[m
+[32m+[m					[32m}[m
+ 				}[m
+ [m
+ 				// tries to infer extension by mimetype; fallback to .webp[m
+[36m@@ -1245,14 +1322,13 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ [m
+ 				// if using S3 (same stream as other media)[m
+ 				if s3Config.Enabled == "true" && (s3Config.MediaDelivery == "s3" || s3Config.MediaDelivery == "both") {[m
+[31m-					ensureS3ClientForUser(txtid)[m
+ 					isIncoming := evt.Info.IsFromMe == false[m
+ 					contactJID := evt.Info.Sender.String()[m
+ 					if evt.Info.IsGroup {[m
+ 						contactJID = evt.Info.Chat.String()[m
+ 					}[m
+ 					s3Data, err := GetS3Manager().ProcessMediaForS3([m
+[31m-						context.Background(),[m
+[32m+[m						[32mctx,[m
+ 						txtid,[m
+ 						contactJID,[m
+ 						evt.Info.ID,[m
+[36m@@ -1786,10 +1862,25 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 		postmap["type"] = "ConnectFailure"[m
+ 		dowebhook = 1[m
+ 		log.Error().Str("reason", fmt.Sprintf("%+v", evt)).Msg("Failed to connect to Whatsapp")[m
+[32m+[m
+ 	case *events.UndecryptableMessage:[m
+[31m-		postmap["type"] = "UndecryptableMessage"[m
+[31m-		dowebhook = 1[m
+[31m-		log.Warn().Str("info", evt.Info.SourceString()).Msg("Undecryptable message received")[m
+[32m+[m		[32minfo := evt.Info[m
+[32m+[m
+[32m+[m		[32msenderStr := resolveLIDToPhoneJIDNoCtx(mycli.db, info.Sender.String())[m
+[32m+[m		[32mchatStr := resolveLIDToPhoneJIDNoCtx(mycli.db, info.Chat.String())[m
+[32m+[m
+[32m+[m		[32mif sj, err := types.ParseJID(senderStr); err == nil {[m
+[32m+[m			[32minfo.Sender = sj[m
+[32m+[m		[32m}[m
+[32m+[m		[32mif cj, err := types.ParseJID(chatStr); err == nil {[m
+[32m+[m			[32minfo.Chat = cj[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mlog.Warn().[m
+[32m+[m			[32mStr("chat", info.Chat.String()).[m
+[32m+[m			[32mStr("sender", info.Sender.String()).[m
+[32m+[m			[32mMsg("Undecryptable message received")[m
+[32m+[m
+ 	case *events.MediaRetry:[m
+ 		postmap["type"] = "MediaRetry"[m
+ 		dowebhook = 1[m
+[36m@@ -1878,11 +1969,75 @@[m [mfunc (mycli *MyClient) myEventHandler(rawEvt interface{}) {[m
+ 		postmap["type"] = "FBMessage"[m
+ 		dowebhook = 1[m
+ 		log.Info().Str("info", evt.Info.SourceString()).Msg("Facebook message received")[m
+[32m+[m
+[32m+[m	[32mcase *events.Contact:[m
+[32m+[m		[32m// evt tem só: JID, Timestamp, Action, FromFullSync[m
+[32m+[m		[32mlog.Debug().[m
+[32m+[m			[32mStr("jid", evt.JID.String()).[m
+[32m+[m			[32mBool("fromFullSync", evt.FromFullSync).[m
+[32m+[m			[32mMsg("Contact event")[m
+[32m+[m
+[32m+[m		[32m// opcional: webhook[m
+[32m+[m		[32mpostmap["type"] = "Contact"[m
+[32m+[m		[32mpostmap["event"] = evt[m
+[32m+[m		[32mdowebhook = 1[m
+[32m+[m	[32mcase *events.PushName:[m
+[32m+[m		[32mjidLid := evt.JID.String()[m
+[32m+[m		[32mjidPhone := evt.JIDAlt.String()[m
+[32m+[m
+[32m+[m		[32mif jidPhone == "" || strings.Contains(jidPhone, "@lid") {[m
+[32m+[m			[32mjidPhone = resolveLIDToPhoneJIDNoCtx(mycli.db, jidLid)[m
+[32m+[m		[32m} else {[m
+[32m+[m			[32mjidPhone = resolveLIDToPhoneJIDNoCtx(mycli.db, jidPhone)[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif !strings.Contains(jidLid, "@lid") {[m
+[32m+[m			[32mjidLid = ""[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif err := upsertContactName(mycli.db, txtid, jidPhone, jidLid, evt.NewPushName, ""); err != nil {[m
+[32m+[m			[32mlog.Warn().Err(err).Str("jid", jidPhone).Msg("failed to upsert PushName")[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m	[32mcase *events.BusinessName:[m
+[32m+[m		[32mjidLid := evt.JID.String()[m
+[32m+[m		[32mjidPhone := resolveLIDToPhoneJIDNoCtx(mycli.db, jidLid)[m
+[32m+[m
+[32m+[m		[32mif !strings.Contains(jidLid, "@lid") {[m
+[32m+[m			[32mjidLid = ""[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32mif err := upsertContactName(mycli.db, txtid, jidPhone, jidLid, "", evt.NewBusinessName); err != nil {[m
+[32m+[m			[32mlog.Warn().Err(err).Str("jid", jidPhone).Msg("failed to upsert BusinessName")[m
+[32m+[m		[32m}[m
+ 	default:[m
+[31m-		log.Warn().Str("event", fmt.Sprintf("%+v", evt)).Msg("Unhandled event")[m
+[32m+[m		[32mlog.Warn().[m
+[32m+[m			[32mStr("go_type", fmt.Sprintf("%T", evt)).[m
+[32m+[m			[32mStr("event", fmt.Sprintf("%+v", evt)).[m
+[32m+[m			[32mMsg("Unhandled event")[m
+ 	}[m
+[32m+[m	[32mif dowebhook == 1 && postmap != nil {[m
+[32m+[m
+[32m+[m		[32m// corta status (stories) - pega Chat e chat[m
+[32m+[m		[32mif chat, ok := postmap["Chat"].(string); ok && chat == "status@broadcast" {[m
+[32m+[m			[32mdowebhook = 0[m
+[32m+[m		[32m} else if chat, ok := postmap["chat"].(string); ok && chat == "status@broadcast" {[m
+[32m+[m			[32mdowebhook = 0[m
+[32m+[m		[32m}[m
+[32m+[m
+[32m+[m		[32m// corta eventos chatos[m
+[32m+[m		[32mif dowebhook == 1 {[m
+[32m+[m			[32mif t, ok := postmap["type"].(string); ok {[m
+[32m+[m				[32mswitch t {[m
+[32m+[m				[32mcase "ChatPresence", "Presence", "UserAbout":[m
+[32m+[m					[32mdowebhook = 0[m
+[32m+[m				[32m}[m
+[32m+[m			[32m}[m
+[32m+[m		[32m}[m
+ [m
+[31m-	if dowebhook == 1 {[m
+[31m-		sendEventWithWebHook(mycli, postmap, path)[m
+[32m+[m		[32m// envia o que sobrou[m
+[32m+[m		[32mif dowebhook == 1 {[m
+[32m+[m			[32msendEventWithWebHook(mycli, postmap, path)[m
+[32m+[m		[32m}[m
+ 	}[m
+ }[m
